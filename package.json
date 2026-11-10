@@ -1,0 +1,34 @@
+{
+  "name": "cutwater",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Development tooling for the cutwater Agent Skill: a GitHub-native, issue-first SDLC workflow driven through gh and git.",
+  "license": "MIT",
+  "author": "Ayush Kumar Shaw",
+  "homepage": "https://github.com/YourAKShaw/ThroughLine#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YourAKShaw/ThroughLine.git"
+  },
+  "bugs": {
+    "url": "https://github.com/YourAKShaw/ThroughLine/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint . && prettier --check . && tsc -p tsconfig.json",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.5",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.14.0",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.2"
+  }
+}

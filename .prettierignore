@@ -1,0 +1,8 @@
+# Markdown is hand-authored; generated and vendored files are not reformatted.
+*.md
+node_modules/
+dist/
+package-lock.json
+skills/cutwater/scripts/cutwater.mjs
+skills/cutwater/assets/
+sandbox/fixtures/
