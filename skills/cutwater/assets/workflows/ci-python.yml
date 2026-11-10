@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [{{defaultBranch}}]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Python checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f pyproject.toml ]; then pip install -e .; fi
+{{#if ciLint}}
+      - name: Lint
+        run: pipx run ruff check .
+{{/if}}
+{{#if ciTest}}
+      - name: Test
+        run: |
+          pip install pytest
+          pytest
+{{/if}}
+{{#if ciBuild}}
+      - name: Build
+        run: |
+          if [ -f pyproject.toml ]; then pip install build && python -m build; fi
+{{/if}}
