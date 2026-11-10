@@ -108,10 +108,9 @@ const GH_READ = new Set([
   "repo view",
   "label list",
   "issue list",
-  "issue view",
   "pr list",
-  "pr view",
   "pr checks",
+  "run view",
 ]);
 const GH_WRITE = new Set(["repo create", "label create"]);
 const GH_FORBIDDEN = new Set([
