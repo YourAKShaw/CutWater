@@ -1,0 +1,27 @@
+#!/usr/bin/env node
+// Fake gh binary for integration tests. State lives in the JSON file named
+// by FAKE_GH_STATE; every call is appended to FAKE_GH_LOG.
+import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
+import { handle } from "../fake-github.mjs";
+
+const statePath = process.env.FAKE_GH_STATE;
+if (!statePath) {
+  process.stderr.write("FAKE_GH_STATE is not set\n");
+  process.exit(2);
+}
+const state = JSON.parse(readFileSync(statePath, "utf8"));
+const args = process.argv.slice(2);
+let input = "";
+if (args.includes("--input")) {
+  try {
+    input = readFileSync(0, "utf8");
+  } catch {
+    input = "";
+  }
+}
+const result = handle(state, args, { input, cwd: process.cwd() });
+writeFileSync(statePath, JSON.stringify(state, null, 2));
+if (process.env.FAKE_GH_LOG) appendFileSync(process.env.FAKE_GH_LOG, `${JSON.stringify(args)}\n`);
+process.stdout.write(result.stdout);
+process.stderr.write(result.stderr);
+process.exit(result.code);
