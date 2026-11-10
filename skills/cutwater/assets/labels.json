@@ -1,0 +1,23 @@
+{
+  "description": "Standard cutwater label set. Names stay emoji-free by default; the emoji is prepended only when the interview opts in to emoji labels.",
+  "labels": [
+    { "name": "type: feat", "emoji": "✨", "color": "a2eeef", "description": "New feature or user-facing capability" },
+    { "name": "type: fix", "emoji": "🐛", "color": "d73a4a", "description": "Something is broken and needs fixing" },
+    { "name": "type: docs", "emoji": "📝", "color": "0075ca", "description": "Documentation only" },
+    { "name": "type: style", "emoji": "🎨", "color": "c5def5", "description": "Formatting or code style, no behavior change" },
+    { "name": "type: refactor", "emoji": "♻️", "color": "fbca04", "description": "Code change that neither fixes a bug nor adds a feature" },
+    { "name": "type: perf", "emoji": "⚡", "color": "f9d0c4", "description": "Performance improvement" },
+    { "name": "type: test", "emoji": "✅", "color": "bfd4f2", "description": "Adds or corrects tests" },
+    { "name": "type: build", "emoji": "📦", "color": "5319e7", "description": "Build system or dependencies" },
+    { "name": "type: ci", "emoji": "👷", "color": "1d76db", "description": "Continuous integration configuration" },
+    { "name": "type: chore", "emoji": "🔧", "color": "cfd3d7", "description": "Maintenance that does not touch source or tests" },
+    { "name": "priority: p0", "emoji": "🔥", "color": "b60205", "description": "Critical: drop everything" },
+    { "name": "priority: p1", "emoji": "🟠", "color": "d93f0b", "description": "High: next up" },
+    { "name": "priority: p2", "emoji": "🟡", "color": "fbca04", "description": "Normal priority" },
+    { "name": "priority: p3", "emoji": "🟢", "color": "0e8a16", "description": "Low: when there is time" },
+    { "name": "status: in-progress", "emoji": "🚧", "color": "1d76db", "description": "Being worked on now" },
+    { "name": "status: blocked", "emoji": "⛔", "color": "b60205", "description": "Waiting on something outside this issue" },
+    { "name": "status: needs-review", "emoji": "👀", "color": "5319e7", "description": "Pull request open and waiting for review" },
+    { "name": "scope-change", "emoji": "🔀", "color": "fef2c0", "description": "Scope changed mid-task; see the logged comment" }
+  ]
+}
