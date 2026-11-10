@@ -46,7 +46,7 @@ export interface LintOptions {
 const HEADER = /^(?<type>[A-Za-z]+)(?:\((?<scope>[^()]*)\))?(?<bang>!)?: (?<subject>.*)$/;
 const SHORTCODE = /^:[a-z0-9_+-]+:\s+/;
 const UNICODE_EMOJI =
-  /^(?:\p{Extended_Pictographic}|\p{Emoji_Presentation})(?:️|‍|\p{Extended_Pictographic})*\s+/u;
+  /^(?:\p{Extended_Pictographic}|\p{Emoji_Presentation})(?:\uFE0F|\u200D|\p{Extended_Pictographic})*\s+/u;
 const LEADING_EMOJI = /^(?::[a-z0-9_+-]+:|\p{Extended_Pictographic})/u;
 
 export function stripGitmoji(subject: string): { emoji: string | null; text: string } {
