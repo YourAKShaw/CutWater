@@ -1,0 +1,118 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    name: Validate, test, and lint (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Development tooling runs TypeScript through Node's type stripping (22.18+).
+        node: ["22", "24"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - name: Validate the skill package
+        run: npm run validate
+      - name: Bundle is up to date
+        run: npm run build:check
+      - name: Eval suites are well-formed
+        run: npm run evals:check
+      - run: npm test
+      - run: npm run lint
+
+  bundle:
+    name: Shipped helper runs on Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The bundled helper promises Node.js 18+ with no dependencies.
+        node: ["18", "20"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Smoke-test offline subcommands
+        run: |
+          cw="node $GITHUB_WORKSPACE/skills/cutwater/scripts/cutwater.mjs"
+          $cw --version
+          $cw lint-commit "feat(api): :sparkles: add token refresh (#42)" --issue 42
+          ! $cw lint-commit "✨ feat: emoji before the type"
+          $cw branch-name --login octocat --type fix --issue 7 --title "Crème brûlée login bug"
+          tmp=$(mktemp -d)
+          git -C "$tmp" init -q -b main
+          (cd "$tmp" && $cw audit --offline --json > audit.json && grep -q '"classification": "not-set-up"' audit.json)
+          echo "nothing secret" | $cw scan-secrets -
+
+  skills-ref:
+    name: Agent Skills reference validator
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Install skills-ref at a pinned commit
+        run: pip install "git+https://github.com/agentskills/agentskills@83021e2be457a9b6679148719c1f6074f0ad975e#subdirectory=skills-ref"
+      - name: Validate skills/cutwater
+        run: skills-ref validate skills/cutwater
+
+  commits:
+    name: Commit messages follow the contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Check commit messages
+        # Dependabot writes its own messages and cannot add the required trailers.
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          TRAILER: "Co-Authored-By: Claude Code <noreply@anthropic.com>"
+        run: |
+          # A new branch or manual run has no base; check only the head commit.
+          if [ -z "${BASE//0/}" ]; then
+            commits="$HEAD"
+          else
+            commits=$(git rev-list --no-merges "$BASE..$HEAD")
+          fi
+          status=0
+          for sha in $commits; do
+            if [ "$(git log -1 --format=%an "$sha")" = "dependabot[bot]" ]; then
+              continue
+            fi
+            git log -1 --format='%h %s' "$sha"
+            git log -1 --format=%B "$sha" | python3 .github/scripts/lint-commit.py --trailer "$TRAILER" - || status=1
+          done
+          exit $status
