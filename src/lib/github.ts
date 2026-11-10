@@ -1,6 +1,7 @@
 /** Small read-mostly GitHub helpers: reactions, status and wiki checks. */
 import { CutwaterError } from "./errors.ts";
 import { gh, ghJson, git, type ExecContext } from "./exec.ts";
+import { cleanTitle, type InjectionSignal } from "./read.ts";
 
 export const REACTIONS = [
   "+1",
@@ -103,6 +104,8 @@ export interface StatusReport {
   localBranches: string[];
   remoteBranches: string[];
   branchesWithoutPr: string[];
+  /** Injection signals found in issue and PR titles (titles are cleaned). */
+  signals: InjectionSignal[];
 }
 
 export async function status(ctx: ExecContext, repo: string, login: string): Promise<StatusReport> {
@@ -148,18 +151,19 @@ export async function status(ctx: ExecContext, repo: string, login: string): Pro
     ref.replace(/^origin\//, ""),
   );
   const prBranches = new Set(pulls.map((pull) => pull.headRefName));
+  const signals: InjectionSignal[] = [];
   return {
     repo,
     login,
     issues: issues.map((issue) => ({
       number: issue.number,
-      title: issue.title,
+      title: cleanTitle(issue.title, `issue #${issue.number} title`, signals),
       url: issue.url,
       labels: (issue.labels ?? []).map((label) => label.name),
     })),
     pulls: pulls.map((pull) => ({
       number: pull.number,
-      title: pull.title,
+      title: cleanTitle(pull.title, `pr #${pull.number} title`, signals),
       url: pull.url,
       branch: pull.headRefName,
       draft: pull.isDraft,
@@ -170,6 +174,7 @@ export async function status(ctx: ExecContext, repo: string, login: string): Pro
     branchesWithoutPr: [...new Set([...localBranches, ...remoteBranches])]
       .filter((branch) => !prBranches.has(branch))
       .sort(),
+    signals,
   };
 }
 
