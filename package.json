@@ -20,7 +20,7 @@
   "scripts": {
     "build": "node scripts/build.ts",
     "build:check": "node scripts/build.ts --check",
-    "test": "node --test test/*.test.ts",
+    "test": "node --test test/*.test.ts test/integration/*.test.ts",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint . && prettier --check . && tsc -p tsconfig.json",
     "format": "prettier --write ."
