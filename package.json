@@ -18,12 +18,15 @@
     "node": ">=22.18.0"
   },
   "scripts": {
+    "validate": "node scripts/validate-skill.ts",
     "build": "node scripts/build.ts",
     "build:check": "node scripts/build.ts --check",
     "test": "node --test test/*.test.ts test/integration/*.test.ts",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint . && prettier --check . && tsc -p tsconfig.json",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "evals:check": "node scripts/evals.ts check",
+    "check": "npm run validate && npm run build:check && npm run evals:check && npm test && npm run lint"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
