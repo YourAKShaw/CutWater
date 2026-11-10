@@ -1,0 +1,17 @@
+{
+  "name": "cutwater",
+  "owner": {
+    "name": "Ayush Kumar Shaw",
+    "url": "https://github.com/YourAKShaw"
+  },
+  "metadata": {
+    "description": "The cutwater issue-first GitHub workflow skill."
+  },
+  "plugins": [
+    {
+      "name": "cutwater",
+      "source": "./",
+      "description": "A GitHub-native, issue-first SDLC workflow skill driven through gh and git. The user always merges."
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "cutwater",
+  "displayName": "cutwater",
+  "version": "0.1.0",
+  "description": "A GitHub-native, issue-first SDLC workflow: audit and set up a repository, then drive every task as issue, branch, Conventional Commits and a pull request the user merges.",
+  "author": {
+    "name": "Ayush Kumar Shaw",
+    "url": "https://github.com/YourAKShaw"
+  },
+  "homepage": "https://github.com/YourAKShaw/ThroughLine#readme",
+  "repository": "https://github.com/YourAKShaw/ThroughLine",
+  "license": "MIT",
+  "keywords": [
+    "github",
+    "gh cli",
+    "issue-first",
+    "conventional commits",
+    "pull requests",
+    "sdlc",
+    "repository setup"
+  ]
+}
