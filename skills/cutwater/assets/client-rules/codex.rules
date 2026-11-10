@@ -1,0 +1,27 @@
+# Optional hard limits for cutwater in Codex CLI.
+# Copy to ~/.codex/rules/cutwater.rules. Rule syntax follows the Codex
+# execution-policy prefix rules; check it against your Codex version.
+
+prefix_rule(
+    pattern = ["gh", "pr", "merge"],
+    decision = "forbidden",
+    justification = "cutwater never merges: the user reviews and merges every pull request.",
+)
+
+prefix_rule(
+    pattern = ["gh", "repo", "delete"],
+    decision = "forbidden",
+    justification = "Deleting a repository is irreversible.",
+)
+
+prefix_rule(
+    pattern = ["git", "push", ["--force", "-f", "--force-with-lease"]],
+    decision = "prompt",
+    justification = "Force-pushing rewrites remote history and needs explicit confirmation.",
+)
+
+prefix_rule(
+    pattern = ["git", "push", "--delete"],
+    decision = "prompt",
+    justification = "Deleting a remote branch needs explicit confirmation.",
+)

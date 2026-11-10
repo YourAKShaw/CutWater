@@ -1,0 +1,15 @@
+{
+  "$comment": "Optional hard limits for cutwater in Claude Code. Merge the deny list into .claude/settings.json (project) or ~/.claude/settings.json (user). Prefix rules match the command as typed, so reordered arguments (for example `git push origin --force`) are not caught; keep the skill's own rules as well.",
+  "permissions": {
+    "deny": [
+      "Bash(gh pr merge:*)",
+      "Bash(gh pr merge)",
+      "Bash(gh repo delete:*)",
+      "Bash(gh repo edit --visibility:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git push --force-with-lease:*)",
+      "Bash(git push --delete:*)"
+    ]
+  }
+}
