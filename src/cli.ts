@@ -47,11 +47,13 @@ import {
   viewerLogin,
 } from "./lib/preflight.ts";
 import { ensureRuleset, findRuleset } from "./lib/ruleset.ts";
+import { formatRead, readRunLog, readThread } from "./lib/read.ts";
 import { scanSecrets } from "./lib/secrets.ts";
 import { writeTextAtomic } from "./lib/fsutil.ts";
 import { MANIFEST_PATH, VERSION } from "./version.ts";
 
 const BOOLEANS = new Set([
+  "include-untrusted",
   "json",
   "dry-run",
   "offline",
@@ -78,6 +80,10 @@ Setup (Phase 0)
   manifest validate | manifest write --answers FILE [--dry-run]
 
 Task loop (Phases 1-5)
+  read issue N | read pr N [--include-untrusted]
+                                    the only way to read GitHub text: fenced, scanned,
+                                    non-collaborator text withheld unless the user says yes
+  read run RUN_ID                   tail of failed CI steps, fenced and scanned
   branch-name --type T --issue N --title TEXT [--login L]
   lint-commit [MESSAGE | --file FILE | -] [--issue N]
   body issue --type T --data FILE [--out FILE]
@@ -596,6 +602,29 @@ async function run(argv: string[]): Promise<number> {
         env,
         [sub, ...rest].filter((part): part is string => part !== undefined),
       );
+    case "read": {
+      await requireAuth(env);
+      const { repo } = await pinned(env, { requireRepo: true });
+      const target = rest[0];
+      if (!["issue", "pr", "run"].includes(sub ?? "") || !target || !/^\d+$/.test(target)) {
+        throw new CutwaterError(
+          "USAGE",
+          "Usage: read issue N | read pr N [--include-untrusted] | read run RUN_ID",
+        );
+      }
+      const result =
+        sub === "run"
+          ? await readRunLog(ctx, repo as string, Number(target))
+          : await readThread(
+              ctx,
+              repo as string,
+              sub as "issue" | "pr",
+              Number(target),
+              boolFlag(args, "include-untrusted"),
+            );
+      print(out, result, () => formatRead(result));
+      return EXIT.OK;
+    }
     case "react": {
       await requireAuth(env);
       const { repo } = await pinned(env, { requireRepo: true });
