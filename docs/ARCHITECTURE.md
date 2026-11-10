@@ -60,7 +60,7 @@ References never link to each other, because agents sometimes preview files part
 | `lib/labels.ts`, `lib/ruleset.ts` | Label diffing and upserts; ruleset lookup, comparison, POST or PUT |
 | `lib/commitlint.ts`, `lib/branch.ts` | Conventional Commit linting; branch names |
 | `lib/body.ts`, `lib/secrets.ts` | Issue and PR bodies; the secret scanner |
-| `lib/read.ts` | The only reader of GitHub text: author-trust gating, invisible-character stripping, injection signals, fencing, CI-log tails |
+| `lib/read.ts` | The only reader of GitHub text: author-trust gating, invisible-character stripping, injection signals, fencing, CI-log tails, merged PR titles and the title cleaner used by `cw status` |
 | `lib/github.ts` | Reactions, status, wiki check |
 | `cli.ts` | Subcommands, `--json` and human output, exit codes |
 
@@ -99,7 +99,7 @@ The integration tests run setup twice through the real bundle and assert zero AP
 ## Safety layers
 
 1. **Instructions** in `SKILL.md` and `references/security.md`: the hard rules, gates, and GitHub text treated as data.
-2. **Helper enforcement:** the allowlist (no merge, no push, no shell, no raw issue or PR reads), `cw read` (non-collaborator text withheld by default, injection signals, fenced output), repository pinning, gated `apply` and `ruleset ensure`, compare-and-set, and secret-scanned bodies.
+2. **Helper enforcement:** the allowlist (no merge, no push, no shell, no raw issue or PR reads), `cw read` (non-collaborator text withheld by default, injection signals, fenced output), cleaned and scanned titles in `cw status` and `cw read merged`, repository pinning, gated `apply` and `ruleset ensure`, compare-and-set, and secret-scanned bodies.
 3. **Optional client rules:** Claude Code deny rules and Codex prefix rules in `assets/client-rules/`.
 4. **Scaffolded hygiene:** read-only workflow permissions, SHA-pinned actions, no `pull_request_target`, and Dependabot for actions.
 

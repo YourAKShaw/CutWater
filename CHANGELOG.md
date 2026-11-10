@@ -7,6 +7,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Security
 
 - Close the third-party content exposure that Snyk reported as W011 (indirect prompt injection risk). A new `cw read issue|pr|run` subcommand is now the only way the skill reads issue, PR, comment, review and CI-log text. It withholds text by authors who are not owners, members or collaborators unless the user agrees (`--include-untrusted`, a new confirmation gate), strips zero-width and bidi control characters, reports hidden HTML comments, scans for injection signals, and fences its output as untrusted data. `gh issue view` and `gh pr view` were removed from the helper's allowlist, and the wiki no longer uses closed-issue titles.
+- Route the remaining issue and PR title lists through the helper: `cw status` cleans and scans titles, and the new `cw read merged` gives the wiki changelog merged PR titles without bodies. The skill no longer tells the agent to run raw `gh issue list` or `gh pr list`.
 
 ### Fixed
 

@@ -157,7 +157,7 @@ npm ci
 npm run check
 ```
 
-This runs the package validator, the bundle freshness check, the eval suite check, 102 unit and integration tests (including the idempotency gate on every sandbox fixture), and lint. These checks show that the package is well-formed and the helper behaves as tested. Whether agents follow the skill is measured by the [evals](evals/README.md), and **no eval results have been recorded yet**.
+This runs the package validator, the bundle freshness check, the eval suite check, 105 unit and integration tests (including the idempotency gate on every sandbox fixture), and lint. These checks show that the package is well-formed and the helper behaves as tested. Whether agents follow the skill is measured by the [evals](evals/README.md), and **no eval results have been recorded yet**.
 
 ---
 
