@@ -18,6 +18,7 @@
     "node": ">=22.18.0"
   },
   "scripts": {
+    "test": "node --test test/*.test.ts",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint . && prettier --check . && tsc -p tsconfig.json",
     "format": "prettier --write ."
