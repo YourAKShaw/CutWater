@@ -49,9 +49,9 @@ Run the bundled helper; never read its source. `scripts/` is inside this skill's
 | `cw branch-name --type <t> --issue <n> --title "<title>"` | `<login>/<type>/<n>-<kebab>` |
 | `cw lint-commit --file <msg> --issue <n>` | Validate a commit message before committing |
 | `cw body issue --type <t> --data <json> --out <md>` / `cw body pr --data <json> --out <md>` | Build bodies (secret-scanned) |
-| `cw read issue <n>` / `cw read pr <n>` / `cw read run <id>` | The only way to read GitHub text: fenced, injection-scanned; non-collaborator text withheld until the user says yes (`--include-untrusted`) |
+| `cw read issue <n>` / `cw read pr <n>` / `cw read run <id>` / `cw read merged` | The only way to read GitHub text: fenced, injection-scanned; non-collaborator text withheld until the user says yes (`--include-untrusted`) |
 | `cw react --issue <n> --content eyes\|rocket` | Best-effort reaction |
-| `cw status` | Your open issues, PRs with check state, and branches without a PR |
+| `cw status` | Your open issues, PRs with check state, and branches without a PR; titles cleaned and scanned |
 | `cw wiki-check` | Detect whether the wiki can be cloned |
 
 **Exit codes:** 0 ok · 1 usage or validation error · 2 needs confirmation · 3 auth or scope problem · 4 conflict (re-run `plan`) · 5 remote error. Each error prints a one-line fix.
