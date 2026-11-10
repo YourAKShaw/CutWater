@@ -1,0 +1,24 @@
+name: 📝 Documentation
+description: Missing, wrong or unclear documentation.
+title: "📝 docs: "
+labels: ["type: docs"]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Pages affected
+      placeholder: README.md, docs/SKILL-USAGE.md, references/gh-commands.md
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong or missing
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested change
+    validations:
+      required: false

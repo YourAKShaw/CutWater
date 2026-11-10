@@ -1,0 +1,44 @@
+name: 🐛 Bug report
+description: The skill guided an agent wrongly, the helper failed, or a template is broken.
+title: "🐛 fix: "
+labels: ["type: fix"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search existing issues first. Remove tokens, private repository names, customer data and personal information from everything you paste.
+  - type: input
+    id: component
+    attributes:
+      label: Affected component
+      placeholder: SKILL.md, references/interruptions.md, cutwater.mjs apply, assets/workflows/ci-node.yml
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: The smallest prompt, repository state or helper command that shows the problem. For helper bugs, include the command with `--json` and its output.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Cite the rule you expected to apply, for example "hard rule 3" or "init-checklist, scaffold order step 6".
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and impact
+      description: For agent behaviour, separate what the skill says from what the host or model did.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Version and environment
+      description: Skill version or commit, host (Claude Code, Codex, …), model, gh version, Node.js version, OS.
+    validations:
+      required: true
