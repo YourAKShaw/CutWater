@@ -36,7 +36,7 @@ The name: a ship's *cutwater* is the forward edge of the bow, the part that goes
 | **Never overwrites blindly** | Existing files get a unified diff and a per-file yes. A file edited after planning is refused (compare-and-set). |
 | **Issue-first traceability** | Structured issue bodies, `<login>/<type>/<n>-<slug>` branches, linted Conventional Commits referencing `#n`, and PRs with `Closes #n`, testing evidence and a mandatory **Not verified** section. |
 | **Interruption discipline** | "Also handle the empty state" → edit the issue and log it. "Add dark mode" → a new issue and branch. Each decision is stated in one line. |
-| **Safety by construction** | Merging is forbidden; destructive actions are gated; GitHub text is treated as data; every call is pinned to one repository; outgoing bodies are secret-scanned. |
+| **Safety by construction** | Merging is forbidden; destructive actions are gated; issue, PR and CI-log text is read only through a fenced reader that withholds non-collaborators' text by default and flags injection attempts; every call is pinned to one repository; outgoing bodies are secret-scanned. |
 | **Deterministic helper** | A zero-dependency Node.js 18+ CLI does the fragile work, with `--json`, `--dry-run`, typed errors and stable exit codes. The agent runs it, never reads it. |
 | **Portable** | Spec-only frontmatter works in Claude Code, Codex, Antigravity and other Agent Skills clients, with `agents/openai.yaml` for Codex. |
 
@@ -157,7 +157,7 @@ npm ci
 npm run check
 ```
 
-This runs the package validator, the bundle freshness check, the eval suite check, 95 unit and integration tests (including the idempotency gate on every sandbox fixture), and lint. These checks show that the package is well-formed and the helper behaves as tested. Whether agents follow the skill is measured by the [evals](evals/README.md), and **no eval results have been recorded yet**.
+This runs the package validator, the bundle freshness check, the eval suite check, 102 unit and integration tests (including the idempotency gate on every sandbox fixture), and lint. These checks show that the package is well-formed and the helper behaves as tested. Whether agents follow the skill is measured by the [evals](evals/README.md), and **no eval results have been recorded yet**.
 
 ---
 

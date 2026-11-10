@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Security
+
+- Close the third-party content exposure that Snyk reported as W011 (indirect prompt injection risk). A new `cw read issue|pr|run` subcommand is now the only way the skill reads issue, PR, comment, review and CI-log text. It withholds text by authors who are not owners, members or collaborators unless the user agrees (`--include-untrusted`, a new confirmation gate), strips zero-width and bidi control characters, reports hidden HTML comments, scans for injection signals, and fences its output as untrusted data. `gh issue view` and `gh pr view` were removed from the helper's allowlist, and the wiki no longer uses closed-issue titles.
+
+### Fixed
+
+- The gitmoji regex now uses escapes instead of literal invisible characters.
+
 ## [0.1.0] - 2026-11-10
 
 Initial release.
