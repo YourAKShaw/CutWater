@@ -24,7 +24,7 @@
    `📝 Decision: edit issue #42 + log comment — scope change, same goal.`
 3. Act:
    - **Comment:** post the clarification and keep working.
-   - **Edit + log:** fetch the body (`gh issue view N --json body`), change only the affected sections, re-render it with `cw body issue`, then `gh issue edit N --body-file …` and `--add-label scope-change`. Post a log comment that quotes the change.
+   - **Edit + log:** fetch the body with `cw read issue N --json` (`items[0].text`, the issue you created), change only the affected sections, re-render it with `cw body issue`, then `gh issue edit N --body-file …` and `--add-label scope-change`. Post a log comment that quotes the change.
    - **New issue:** commit or stash nothing without asking. Finish or park the current work (commit what is done on the current branch, or ask), create the new issue, branch from the updated default branch, and link both issues ("Related to #42" / "Related to #57").
 4. If the change invalidates work that is already committed, revert it on the same branch with a normal commit (`revert:` or `refactor:`). Never rewrite pushed history without a yes.
 
