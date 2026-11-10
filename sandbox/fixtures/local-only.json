@@ -1,0 +1,18 @@
+{
+  "description": "A local folder with code but no GitHub remote.",
+  "remote": null,
+  "github": {},
+  "files": {
+    "README.md": "# Local tool\n",
+    "src/index.js": "console.log('hi');\n",
+    "package.json": "{\"name\":\"local-tool\"}\n"
+  },
+  "expected": {
+    "classification": "not-set-up",
+    "items": {
+      "A1": "fail",
+      "A3": "pass",
+      "A14": "unknown"
+    }
+  }
+}

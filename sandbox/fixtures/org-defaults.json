@@ -1,0 +1,29 @@
+{
+  "description": "The owner's .github repository supplies SECURITY, CODE_OF_CONDUCT and CONTRIBUTING defaults.",
+  "remote": "octocat/demo",
+  "github": {
+    "orgDotGithub": {
+      "octocat": [
+        "SECURITY.md",
+        "CODE_OF_CONDUCT.md",
+        ".github/CONTRIBUTING.md"
+      ]
+    }
+  },
+  "files": {
+    "README.md": "# Demo\n"
+  },
+  "expected": {
+    "classification": "not-set-up",
+    "items": {
+      "A5": "org-default",
+      "A6": "org-default",
+      "A7": "org-default"
+    },
+    "orgDefaultsPending": [
+      "A5",
+      "A6",
+      "A7"
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "description": "A repository whose hand-written README must never be overwritten without a diff and a yes.",
+  "remote": "octocat/demo",
+  "github": {},
+  "files": {
+    "README.md": "# Hand-written README\n\nThis text belongs to the user.\n"
+  },
+  "expected": {
+    "classification": "not-set-up",
+    "items": {
+      "A3": "pass"
+    },
+    "planConflicts": [
+      "file:README.md"
+    ]
+  }
+}

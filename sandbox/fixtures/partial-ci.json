@@ -1,0 +1,22 @@
+{
+  "description": "A Node project with CI and Dependabot but no community files.",
+  "remote": "octocat/demo",
+  "github": {},
+  "files": {
+    "package.json": "{\"name\":\"demo\",\"scripts\":{\"test\":\"node --test\"}}\n",
+    ".github/workflows/ci.yml": "name: CI\non: [push]\njobs: {}\n",
+    ".github/dependabot.yml": "version: 2\nupdates: []\n",
+    ".gitignore": "node_modules/\n",
+    ".editorconfig": "root = true\n",
+    "README.md": "# Demo\n"
+  },
+  "expected": {
+    "classification": "partially-set-up",
+    "items": {
+      "A11": "pass",
+      "A12": "pass",
+      "A13": "pass",
+      "A5": "fail"
+    }
+  }
+}

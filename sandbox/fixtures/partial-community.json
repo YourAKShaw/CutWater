@@ -1,0 +1,23 @@
+{
+  "description": "Community health files exist, but no issue forms, CI, labels or manifest.",
+  "remote": "octocat/demo",
+  "github": {},
+  "files": {
+    "README.md": "# Demo\n",
+    "LICENSE": "MIT License\n",
+    "CONTRIBUTING.md": "# Contributing\n",
+    "CODE_OF_CONDUCT.md": "# Code of conduct\n",
+    "SECURITY.md": "# Security\n",
+    ".gitignore": "node_modules/\n"
+  },
+  "expected": {
+    "classification": "partially-set-up",
+    "items": {
+      "A3": "pass",
+      "A7": "pass",
+      "A8": "fail",
+      "A11": "fail",
+      "A13": "fail"
+    }
+  }
+}

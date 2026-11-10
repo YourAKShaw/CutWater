@@ -1,0 +1,19 @@
+{
+  "description": "A brand-new, empty GitHub repository with a local clone and no files.",
+  "remote": "octocat/demo",
+  "github": {
+    "repo": {
+      "isEmpty": true,
+      "defaultBranch": ""
+    }
+  },
+  "files": {},
+  "expected": {
+    "classification": "not-set-up",
+    "items": {
+      "A1": "pass",
+      "A3": "fail",
+      "A16": "fail"
+    }
+  }
+}
