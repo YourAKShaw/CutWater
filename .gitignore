@@ -1,0 +1,40 @@
+# Operating-system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors and IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Node.js tooling
+node_modules/
+npm-debug.log*
+.npm/
+.eslintcache
+*.tsbuildinfo
+
+# Python caches (commit checker, skills-ref)
+__pycache__/
+*.py[cod]
+.venv/
+
+# Build, test, and release output
+dist/
+coverage/
+*.log
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Temporary archives and patches
+*.tmp
+*.bak
+*.orig
+*.rej
+*.zip
