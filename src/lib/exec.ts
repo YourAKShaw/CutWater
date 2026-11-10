@@ -36,7 +36,13 @@ export const spawnRunner: Runner = (cmd, args, opts) =>
         cwd: opts.cwd,
         shell: false,
         windowsHide: true,
-        env: { ...process.env, GH_PROMPT_DISABLED: "1", GH_NO_UPDATE_NOTIFIER: "1", NO_COLOR: "1" },
+        env: {
+          ...process.env,
+          GH_PROMPT_DISABLED: "1",
+          GH_NO_UPDATE_NOTIFIER: "1",
+          GIT_TERMINAL_PROMPT: "0",
+          NO_COLOR: "1",
+        },
       });
     } catch (error) {
       resolve({ code: 127, stdout: "", stderr: String(error) });
