@@ -1419,7 +1419,7 @@ async function audit(ctx, opts) {
     status: remote ? "pass" : opts.offline && opts.repo ? "unknown" : "fail",
     required: true,
     found: opts.repoInfo?.nameWithOwner ?? opts.repo,
-    detail: remote ? `origin is ${opts.repoInfo?.nameWithOwner}` : opts.repo ? `${opts.repo} not reachable` : "no GitHub remote",
+    detail: remote ? `${opts.repoInfo?.nameWithOwner} is reachable on GitHub` : opts.repo ? `${opts.repo} not reachable` : "no GitHub remote",
     fix: FIX.A1 ?? ""
   });
   const defaultBranch = opts.repoInfo?.defaultBranch ?? null;

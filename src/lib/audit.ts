@@ -238,7 +238,7 @@ export async function audit(ctx: ExecContext, opts: AuditOptions): Promise<Audit
     required: true,
     found: opts.repoInfo?.nameWithOwner ?? opts.repo,
     detail: remote
-      ? `origin is ${opts.repoInfo?.nameWithOwner}`
+      ? `${opts.repoInfo?.nameWithOwner} is reachable on GitHub`
       : opts.repo
         ? `${opts.repo} not reachable`
         : "no GitHub remote",
