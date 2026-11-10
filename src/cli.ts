@@ -47,7 +47,7 @@ import {
   viewerLogin,
 } from "./lib/preflight.ts";
 import { ensureRuleset, findRuleset } from "./lib/ruleset.ts";
-import { formatRead, readRunLog, readThread } from "./lib/read.ts";
+import { formatMerged, formatRead, readMerged, readRunLog, readThread } from "./lib/read.ts";
 import { scanSecrets } from "./lib/secrets.ts";
 import { writeTextAtomic } from "./lib/fsutil.ts";
 import { MANIFEST_PATH, VERSION } from "./version.ts";
@@ -84,6 +84,7 @@ Task loop (Phases 1-5)
                                     the only way to read GitHub text: fenced, scanned,
                                     non-collaborator text withheld unless the user says yes
   read run RUN_ID                   tail of failed CI steps, fenced and scanned
+  read merged [--limit N]           titles of merged PRs (no bodies), fenced and scanned
   branch-name --type T --issue N --title TEXT [--login L]
   lint-commit [MESSAGE | --file FILE | -] [--issue N]
   body issue --type T --data FILE [--out FILE]
@@ -605,11 +606,16 @@ async function run(argv: string[]): Promise<number> {
     case "read": {
       await requireAuth(env);
       const { repo } = await pinned(env, { requireRepo: true });
+      if (sub === "merged") {
+        const list = await readMerged(ctx, repo as string, intFlag(args, "limit") ?? 50);
+        print(out, list, () => formatMerged(list));
+        return EXIT.OK;
+      }
       const target = rest[0];
       if (!["issue", "pr", "run"].includes(sub ?? "") || !target || !/^\d+$/.test(target)) {
         throw new CutwaterError(
           "USAGE",
-          "Usage: read issue N | read pr N [--include-untrusted] | read run RUN_ID",
+          "Usage: read issue N | read pr N [--include-untrusted] | read run RUN_ID | read merged [--limit N]",
         );
       }
       const result =

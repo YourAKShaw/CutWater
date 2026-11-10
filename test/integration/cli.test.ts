@@ -227,4 +227,10 @@ test("read is the fenced, read-only door to GitHub text", () => {
   assert.ok(parsed.signals.some((s) => s.signal === "outside-path"));
   assert.deepEqual(w.ghCalls().slice(mark).filter(MUTATING), []);
   assert.equal(w.cli(["read", "pr", "12"]).code, 1);
+  const merged = w.cli(["read", "merged", "--limit", "10"]);
+  assert.equal(merged.code, 0);
+  assert.match(merged.stdout, /merged pull request\(s\)/);
+  assert.match(merged.stdout, /UNTRUSTED GITHUB CONTENT/);
+  assert.equal(w.cli(["read", "merged", "--limit", "0"]).code, 1);
+  assert.deepEqual(w.ghCalls().slice(mark).filter(MUTATING), []);
 });
