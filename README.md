@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⛵ cutwater
+<h1><img src="docs/assets/banner.svg" alt="cutwater" width="100%"></h1>
 
 **An issue-first GitHub workflow for AI coding agents.**
 
