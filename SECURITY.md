@@ -19,13 +19,13 @@ cutwater is an Agent Skill that drives `gh` and `git` on the user's behalf, so i
 - Unsafe defaults in the scaffolded templates (for example over-broad workflow permissions or unpinned actions).
 - Weaknesses in this repository's workflows, release packaging or plugin manifests.
 
-Out of scope: vulnerabilities in GitHub, the GitHub CLI, agent hosts or models. Report those to their maintainers. Behaviour problems with no security impact belong in a regular [issue](https://github.com/YourAKShaw/ThroughLine/issues/new/choose).
+Out of scope: vulnerabilities in GitHub, the GitHub CLI, agent hosts or models. Report those to their maintainers. Behaviour problems with no security impact belong in a regular [issue](https://github.com/YourAKShaw/CutWater/issues/new/choose).
 
 ## Reporting a vulnerability
 
 **Do not open a public issue for a security problem.**
 
-Report it privately through GitHub's [private vulnerability reporting](https://github.com/YourAKShaw/ThroughLine/security/advisories/new). Include:
+Report it privately through GitHub's [private vulnerability reporting](https://github.com/YourAKShaw/CutWater/security/advisories/new). Include:
 
 1. A description of the problem and its impact.
 2. A prompt, repository state, issue body or helper command that reproduces it, without real tokens or personal data.

@@ -5,13 +5,13 @@
   "description": "Development tooling for the cutwater Agent Skill: a GitHub-native, issue-first SDLC workflow driven through gh and git.",
   "license": "MIT",
   "author": "Ayush Kumar Shaw",
-  "homepage": "https://github.com/YourAKShaw/ThroughLine#readme",
+  "homepage": "https://github.com/YourAKShaw/CutWater#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YourAKShaw/ThroughLine.git"
+    "url": "git+https://github.com/YourAKShaw/CutWater.git"
   },
   "bugs": {
-    "url": "https://github.com/YourAKShaw/ThroughLine/issues"
+    "url": "https://github.com/YourAKShaw/CutWater/issues"
   },
   "type": "module",
   "engines": {

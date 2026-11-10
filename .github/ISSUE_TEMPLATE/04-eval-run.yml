@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Follow [evals/README.md](https://github.com/YourAKShaw/ThroughLine/blob/HEAD/evals/README.md). Report results as observed, whichever way they point.
+        Follow [evals/README.md](https://github.com/YourAKShaw/CutWater/blob/HEAD/evals/README.md). Report results as observed, whichever way they point.
   - type: input
     id: setup
     attributes:

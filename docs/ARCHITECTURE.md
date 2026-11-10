@@ -13,7 +13,7 @@
 ## Repository layout
 
 ```text
-ThroughLine/
+CutWater/
 ├── skills/cutwater/              # The shipped Agent Skill (what users install)
 │   ├── SKILL.md                  # Router: hard rules, phase flow, helper usage (≤ 300 lines)
 │   ├── LICENSE                   # MIT, travels with the skill

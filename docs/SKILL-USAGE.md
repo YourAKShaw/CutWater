@@ -25,7 +25,7 @@ Keep the `skills/cutwater/` folder intact (`SKILL.md`, `references/`, `assets/`,
 ### Claude Code: plugin
 
 ```text
-/plugin marketplace add YourAKShaw/ThroughLine
+/plugin marketplace add YourAKShaw/CutWater
 /plugin install cutwater@cutwater
 ```
 
@@ -34,9 +34,9 @@ The repository must be visible to your GitHub account for the marketplace to res
 ### Claude Code: personal or project skill
 
 ```sh
-git clone https://github.com/YourAKShaw/ThroughLine.git
+git clone https://github.com/YourAKShaw/CutWater.git
 mkdir -p ~/.claude/skills
-cp -R ThroughLine/skills/cutwater ~/.claude/skills/
+cp -R CutWater/skills/cutwater ~/.claude/skills/
 ```
 
 For a project installation, copy it to `.claude/skills/` in that project instead. The entry point must end up at `~/.claude/skills/cutwater/SKILL.md` (or `.claude/skills/cutwater/SKILL.md`).
@@ -51,11 +51,11 @@ Copy the folder to `.agents/skills/cutwater/` in the project, or `~/.gemini/anti
 
 ### Claude apps: upload a ZIP
 
-Download `cutwater-<version>.zip` from the [latest release](https://github.com/YourAKShaw/ThroughLine/releases), or build it: `cd skills && zip -r ../cutwater.zip cutwater`. The archive must contain one top-level `cutwater/` folder with `SKILL.md` directly inside. Upload it under **Customize → Skills**, with code execution enabled. The hosted sandbox needs `gh` and network access for anything beyond reading the guidance.
+Download `cutwater-<version>.zip` from the [latest release](https://github.com/YourAKShaw/CutWater/releases), or build it: `cd skills && zip -r ../cutwater.zip cutwater`. The archive must contain one top-level `cutwater/` folder with `SKILL.md` directly inside. Upload it under **Customize → Skills**, with code execution enabled. The hosted sandbox needs `gh` and network access for anything beyond reading the guidance.
 
 ### Other agents
 
-Any client that supports the [Agent Skills](https://agentskills.io/specification) format can load the folder; `SKILL.md` uses only spec frontmatter fields. With the Skills CLI: `npx skills add YourAKShaw/ThroughLine`.
+Any client that supports the [Agent Skills](https://agentskills.io/specification) format can load the folder; `SKILL.md` uses only spec frontmatter fields. With the Skills CLI: `npx skills add YourAKShaw/CutWater`.
 
 ### Check the install
 

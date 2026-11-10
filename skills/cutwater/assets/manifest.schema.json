@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/YourAKShaw/ThroughLine/main/skills/cutwater/assets/manifest.schema.json",
+  "$id": "https://raw.githubusercontent.com/YourAKShaw/CutWater/main/skills/cutwater/assets/manifest.schema.json",
   "title": "cutwater setup manifest",
   "description": "Records what cutwater applied and verified in a repository. Written last, only after verification.",
   "type": "object",

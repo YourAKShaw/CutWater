@@ -6,7 +6,7 @@
 
 Every change traced from issue to branch to commits to pull request, and you always merge.
 
-[![Tests](https://img.shields.io/github/actions/workflow/status/YourAKShaw/ThroughLine/test.yml?branch=main&style=flat-square&label=Tests)](https://github.com/YourAKShaw/ThroughLine/actions/workflows/test.yml)
+[![Tests](https://img.shields.io/github/actions/workflow/status/YourAKShaw/CutWater/test.yml?branch=main&style=flat-square&label=Tests)](https://github.com/YourAKShaw/CutWater/actions/workflows/test.yml)
 [![Agent Skill](https://img.shields.io/badge/Agent-Skill-334155?style=flat-square)](skills/cutwater/SKILL.md)
 [![Helper: Node.js 18+](https://img.shields.io/badge/Helper-Node.js%2018%2B-334155?style=flat-square)](skills/cutwater/scripts/README-scripts.md)
 [![Conventional Commits](https://img.shields.io/badge/Conventional-Commits-334155?style=flat-square)](https://www.conventionalcommits.org/en/v1.0.0/)
@@ -69,17 +69,17 @@ The skill lives in [`skills/cutwater/`](skills/cutwater/SKILL.md). Keep that fol
 ### Claude Code: plugin
 
 ```text
-/plugin marketplace add YourAKShaw/ThroughLine
+/plugin marketplace add YourAKShaw/CutWater
 /plugin install cutwater@cutwater
 ```
 
 ### Claude Code, Codex, Antigravity: copy the folder
 
 ```sh
-git clone https://github.com/YourAKShaw/ThroughLine.git
-cp -R ThroughLine/skills/cutwater ~/.claude/skills/        # Claude Code
-cp -R ThroughLine/skills/cutwater ~/.agents/skills/        # Codex
-cp -R ThroughLine/skills/cutwater ~/.gemini/antigravity/skills/   # Antigravity
+git clone https://github.com/YourAKShaw/CutWater.git
+cp -R CutWater/skills/cutwater ~/.claude/skills/        # Claude Code
+cp -R CutWater/skills/cutwater ~/.agents/skills/        # Codex
+cp -R CutWater/skills/cutwater ~/.gemini/antigravity/skills/   # Antigravity
 ```
 
 Project-level paths, the Claude app ZIP upload, explicit-only invocation and troubleshooting are in the [usage guide](docs/SKILL-USAGE.md).
@@ -136,7 +136,7 @@ Exit codes: `0` ok · `1` usage or validation · `2` needs confirmation · `3` a
 ## 📂 Inside the repository
 
 ```text
-ThroughLine/
+CutWater/
 ├── skills/cutwater/      # The Agent Skill (what gets installed)
 ├── src/                  # TypeScript source of the helper (bundled into skills/cutwater/scripts/)
 ├── test/                 # Unit tests, a fake GitHub, integration tests through the bundle
@@ -163,7 +163,7 @@ This runs the package validator, the bundle freshness check, the eval suite chec
 
 ## 🤝 Contributing and support
 
-Real transcripts where an agent broke a rule are the most valuable contribution, followed by new stacks, helper fixes and eval runs. Start with the [contribution guide](.github/CONTRIBUTING.md), use the [issue forms](https://github.com/YourAKShaw/ThroughLine/issues/new/choose), or read the [support guide](.github/SUPPORT.md). Report vulnerabilities privately, as described in the [security policy](SECURITY.md). Everyone follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+Real transcripts where an agent broke a rule are the most valuable contribution, followed by new stacks, helper fixes and eval runs. Start with the [contribution guide](.github/CONTRIBUTING.md), use the [issue forms](https://github.com/YourAKShaw/CutWater/issues/new/choose), or read the [support guide](.github/SUPPORT.md). Report vulnerabilities privately, as described in the [security policy](SECURITY.md). Everyone follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License
 

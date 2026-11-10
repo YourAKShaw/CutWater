@@ -29,7 +29,7 @@ Contributions we especially welcome:
 | Contribution | Where to begin |
 | :--- | :--- |
 | Small fix | Open a pull request with the problem and your verification. |
-| Bug or documentation issue | Search existing issues, then use the matching [issue form](https://github.com/YourAKShaw/ThroughLine/issues/new/choose). |
+| Bug or documentation issue | Search existing issues, then use the matching [issue form](https://github.com/YourAKShaw/CutWater/issues/new/choose). |
 | A new rule, gate, phase or helper command | Open an improvement issue first, with the use case and the safety trade-offs. |
 | Eval run | Follow [evals/README.md](../evals/README.md) and use the eval-run form. |
 

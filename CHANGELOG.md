@@ -17,5 +17,5 @@ Initial release.
 - Codex metadata in `agents/openai.yaml`, plus Claude Code plugin and marketplace manifests.
 - Unit and integration tests with a fake GitHub, seven sandbox fixtures, a real-GitHub sandbox reset script, scenario and triggering eval suites, and a package validator.
 
-[Unreleased]: https://github.com/YourAKShaw/ThroughLine/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/YourAKShaw/ThroughLine/releases/tag/v0.1.0
+[Unreleased]: https://github.com/YourAKShaw/CutWater/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/YourAKShaw/CutWater/releases/tag/v0.1.0

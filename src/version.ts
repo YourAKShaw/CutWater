@@ -9,7 +9,7 @@ export const MANIFEST_PATH = ".github/cutwater.json";
 
 /** Public location of the manifest schema, referenced from every manifest. */
 export const MANIFEST_SCHEMA_URL =
-  "https://raw.githubusercontent.com/YourAKShaw/ThroughLine/main/skills/cutwater/assets/manifest.schema.json";
+  "https://raw.githubusercontent.com/YourAKShaw/CutWater/main/skills/cutwater/assets/manifest.schema.json";
 
 /** Name of the default-branch ruleset cutwater creates and looks for. */
 export const RULESET_NAME = "cutwater-default-branch";
