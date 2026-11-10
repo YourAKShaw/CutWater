@@ -1,0 +1,21 @@
+# Binaries and test output
+/bin/
+*.exe
+*.test
+*.out
+coverage.*
+
+# Workspace files
+go.work
+go.work.sum
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Operating-system and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
