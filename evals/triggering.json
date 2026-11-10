@@ -1,0 +1,51 @@
+{
+  "description": "Triggering evals: does the skill activate from its description alone? Targets: recall >= 0.9 and precision >= 0.9 per model. Tune only the description.",
+  "targets": {
+    "recall": 0.9,
+    "precision": 0.9
+  },
+  "should_trigger": [
+    "start a task to add rate limiting",
+    "audit my repo setup",
+    "open a PR for this",
+    "set up this repository on GitHub with issue templates and CI",
+    "create an issue for the flaky checkout test and start working on it",
+    "use cutwater to fix the broken signup form",
+    "what's the status of my open PRs and branches?",
+    "update the wiki with the latest changes",
+    "the scope changed: also support CSV export in this task",
+    "continue the task on issue 42",
+    "add labels and a PR template to this repo",
+    "is this repo properly set up with CONTRIBUTING, SECURITY and CODEOWNERS?",
+    "open an issue, branch and PR for adding dark mode",
+    "make this repo issue-first with Conventional Commits",
+    "scaffold GitHub Actions CI and Dependabot for this project",
+    "/cutwater",
+    "turn this folder into a GitHub repo with a license and code of conduct",
+    "file a bug for the login crash and fix it on a branch",
+    "protect the default branch with a ruleset",
+    "I want every change traced from issue to PR here"
+  ],
+  "should_not_trigger": [
+    "explain this regex",
+    "write a unit test for parseDate",
+    "what's git rebase?",
+    "refactor this function to be pure",
+    "why is my Python script slow?",
+    "translate this paragraph to French",
+    "summarise this article",
+    "what does HTTP 418 mean?",
+    "write a SQL query that counts orders per day",
+    "convert this JSON to YAML",
+    "help me name this variable",
+    "review this paragraph for grammar",
+    "how do I center a div?",
+    "generate a haiku about autumn",
+    "what is the capital of Australia?",
+    "explain the difference between TCP and UDP",
+    "write a bash one-liner to count lines in all .ts files",
+    "debug this null pointer exception",
+    "draft an email to my manager",
+    "what does this stack trace mean?"
+  ]
+}
