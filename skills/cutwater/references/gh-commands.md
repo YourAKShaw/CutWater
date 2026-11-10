@@ -32,9 +32,9 @@ Placeholders: `O/R` is `owner/name` from preflight, `N` is an issue or PR number
 | PR | `gh pr create --repo O/R -B BASE -t TITLE -F FILE -l LABEL [--draft]` | Do not use `--dry-run`: it may still push |
 | PR | `gh pr checks N --repo O/R`, then `cw read run RUN` | CI triage (read-only); never read logs with raw `gh run view` |
 | React | `gh api --method POST repos/O/R/issues/N/reactions -f content=eyes` | Best-effort; a PR number works too |
-| Status | `gh issue list --repo O/R --assignee @me --state open`, `gh pr list --repo O/R --author @me --state open` | Read-only |
+| Status | `cw status` | Read-only; titles are cleaned and scanned for injection signals |
 | Release | `gh release create TAG --repo O/R --generate-notes` | Gated |
-| Wiki | `git ls-remote https://github.com/O/R.wiki.git`, then `git clone` | Fails until the first page exists |
+| Wiki | `cw wiki-check`, then `git clone`; `cw read merged --limit 50` for the changelog | Clone fails until the first page exists |
 | **Never** | `gh pr merge`, `gh pr review --approve`, `gh repo delete`, `git push --force` without a yes | Forbidden or gated |
 
 Reactions accepted by the REST API: `+1`, `-1`, `laugh`, `confused`, `heart`, `hooray`, `rocket`, `eyes`.
