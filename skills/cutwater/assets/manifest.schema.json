@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/YourAKShaw/ThroughLine/main/skills/cutwater/assets/manifest.schema.json",
+  "title": "cutwater setup manifest",
+  "description": "Records what cutwater applied and verified in a repository. Written last, only after verification.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "skillVersion", "createdAt", "updatedAt", "repo", "defaultBranch", "choices", "applied"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "skillVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?$" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "repo": { "type": "string", "pattern": "^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$" },
+    "defaultBranch": { "type": "string", "minLength": 1 },
+    "choices": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["visibility", "stack", "license", "ci", "dependencyBot", "wiki", "projectsBoard", "ruleset"],
+      "properties": {
+        "visibility": { "enum": ["private", "public", "internal"] },
+        "stack": { "enum": ["node-ts", "node", "python", "go", "generic"] },
+        "license": { "enum": ["MIT", "Apache-2.0", "GPL-3.0", "none"] },
+        "ci": { "type": "array", "uniqueItems": true, "items": { "enum": ["lint", "test", "build", "release"] } },
+        "dependencyBot": { "enum": ["dependabot", "renovate", "none"] },
+        "wiki": { "type": "boolean" },
+        "projectsBoard": { "type": ["string", "null"] },
+        "ruleset": { "type": "boolean" },
+        "emojiLabels": { "type": "boolean" },
+        "acceptOrgDefaults": { "type": "boolean" },
+        "copyrightYear": { "type": "string", "pattern": "^\\d{4}$" },
+        "copyrightHolder": { "type": "string" },
+        "maintainer": { "type": "string" },
+        "securityContact": { "type": "string" }
+      }
+    },
+    "applied": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["files", "labels"],
+      "properties": {
+        "files": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["template", "sha256"],
+            "properties": {
+              "template": { "type": "string" },
+              "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+            }
+          }
+        },
+        "labels": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "rulesetId": { "type": ["integer", "null"] }
+      }
+    }
+  }
+}
