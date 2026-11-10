@@ -29,6 +29,8 @@ export function newRepo(overrides = {}) {
     reactions: [],
     issues: [],
     pulls: [],
+    threads: {},
+    runLogs: {},
     ...overrides,
   };
 }
@@ -146,6 +148,10 @@ export function handle(state, args, { input = "", cwd = process.cwd() } = {}) {
     return ok();
   }
   if (verb === "issue list") return json(state.repos[repoName]?.issues ?? []);
+  if (verb === "run view") {
+    const log = state.repos[repoName]?.runLogs?.[args[2]];
+    return log === undefined ? fail("HTTP 404: Not Found") : ok(log);
+  }
   if (verb === "pr list") return json(state.repos[repoName]?.pulls ?? []);
 
   if (args[0] === "api") {
@@ -189,6 +195,15 @@ export function handle(state, args, { input = "", cwd = process.cwd() } = {}) {
         Object.assign(ruleset, JSON.parse(input), { id: ruleset.id });
         return json(ruleset);
       }
+    }
+    const thread = /^(issues|pulls)\/(\d+)(?:\/(comments|reviews))?(?:\?.*)?$/.exec(rest);
+    if (thread && method === "GET") {
+      const t = repo.threads?.[thread[2]];
+      if (!t) return fail("HTTP 404: Not Found");
+      if (thread[1] === "issues" && !thread[3]) return json(t.issue);
+      if (thread[1] === "issues" && thread[3] === "comments") return json(t.comments ?? []);
+      if (thread[1] === "pulls" && thread[3] === "reviews") return json(t.reviews ?? []);
+      if (thread[1] === "pulls" && thread[3] === "comments") return json(t.reviewComments ?? []);
     }
     const reaction = /^issues\/(\d+)\/reactions$/.exec(rest);
     if (reaction && method === "POST") {

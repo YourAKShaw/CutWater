@@ -17,6 +17,16 @@ export interface FakeRepo {
   reactions: { issue: number; content: string }[];
   issues: Record<string, unknown>[];
   pulls: Record<string, unknown>[];
+  threads: Record<
+    string,
+    {
+      issue: Record<string, unknown>;
+      comments?: Record<string, unknown>[];
+      reviews?: Record<string, unknown>[];
+      reviewComments?: Record<string, unknown>[];
+    }
+  >;
+  runLogs: Record<string, string>;
 }
 
 export interface FakeState {
