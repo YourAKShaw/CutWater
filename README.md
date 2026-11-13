@@ -1,3 +1,5 @@
+[![HOL Guard](https://img.shields.io/endpoint?url=https%3A%2F%2Fhol.org%2Fapi%2Fregistry%2Fbadges%2Fplugin%3Fslug%3Dyourakshaw%252Fcutwater%26metric%3Drelease)](https://hol.org/registry/plugins/yourakshaw%2Fcutwater?utm_source=hol_marketplace&utm_medium=plugins_badge&utm_campaign=plugins&utm_content=yourakshaw%2Fcutwater&ref=plugin-author-442d4850)
+
 <div align="center">
 
 <h1><img src="docs/assets/banner.svg" alt="cutwater" width="100%"></h1>
