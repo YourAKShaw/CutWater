@@ -81,6 +81,16 @@ export interface IssueBodyInput {
   trackerRefs?: TrackerRef[];
 }
 
+/** Parses as a URL with an https scheme and a host (rejects bad ports). */
+function isHttpsUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname !== "";
+  } catch {
+    return false;
+  }
+}
+
 function renderTrackerRefs(refs: TrackerRef[]): string {
   const bad = refs.filter(
     (ref) =>
@@ -88,7 +98,8 @@ function renderTrackerRefs(refs: TrackerRef[]): string {
       ref.key.length > MAX_TICKET_LENGTH ||
       !TICKET_SHAPES.none.test(ref.key) ||
       typeof ref.url !== "string" ||
-      !/^https:\/\/[^\s<>()[\]]+$/.test(ref.url),
+      !/^https:\/\/[^\s<>()[\]]+$/.test(ref.url) ||
+      !isHttpsUrl(ref.url),
   );
   if (bad.length > 0) {
     throw new CutwaterError(

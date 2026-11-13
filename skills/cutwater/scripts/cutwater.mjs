@@ -1969,9 +1969,17 @@ function assertNoSecrets(text) {
     );
   }
 }
+function isHttpsUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname !== "";
+  } catch {
+    return false;
+  }
+}
 function renderTrackerRefs(refs) {
   const bad = refs.filter(
-    (ref) => typeof ref?.key !== "string" || ref.key.length > MAX_TICKET_LENGTH || !TICKET_SHAPES.none.test(ref.key) || typeof ref.url !== "string" || !/^https:\/\/[^\s<>()[\]]+$/.test(ref.url)
+    (ref) => typeof ref?.key !== "string" || ref.key.length > MAX_TICKET_LENGTH || !TICKET_SHAPES.none.test(ref.key) || typeof ref.url !== "string" || !/^https:\/\/[^\s<>()[\]]+$/.test(ref.url) || !isHttpsUrl(ref.url)
   );
   if (bad.length > 0) {
     throw new CutwaterError(

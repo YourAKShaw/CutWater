@@ -121,6 +121,8 @@ test("emits Tracker refs only when given, and validates each ref", () => {
     { key: "Req 004", url: "https://x.example" },
     { key: "Req-004", url: "javascript:alert(1)" },
     { key: "Req-004", url: "https://x.example/a b" },
+    { key: "Req-004", url: "https://tracker.example:bad/req/4" },
+    { key: "Req-004", url: "https://:443/req/4" },
   ]) {
     assert.throws(
       () => renderIssueBody("feature", { sections, trackerRefs: [ref] }),
