@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 // Fake gh binary for integration tests. State lives in the JSON file named
 // by FAKE_GH_STATE; every call is appended to FAKE_GH_LOG.
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";

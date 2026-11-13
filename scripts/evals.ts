@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * Eval tooling. Running agents is done in a host (Claude Code, Codex, …);
  * this script checks the suites, prints LLM-judge prompts, and scores

@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * Apply a plan. Order: repository creation, files, labels, verification,
  * manifest (last, and only after everything verified; invariant I8).

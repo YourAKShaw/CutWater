@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * cutwater helper CLI. Bundled to skills/cutwater/scripts/cutwater.mjs.
  * Every subcommand accepts --json; state-changing ones accept --dry-run.

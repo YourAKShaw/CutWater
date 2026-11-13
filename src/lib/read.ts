@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * The single door through which cutwater reads text other people wrote on
  * GitHub: issue and PR bodies, comments, reviews and CI logs.

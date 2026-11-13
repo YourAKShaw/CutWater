@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * Issue and pull request bodies. Issue bodies follow the skeletons in
  * assets/issue-bodies/ (which mirror the issue forms); PR bodies always

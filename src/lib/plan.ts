@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * Scaffold planning: render every file the answers call for and compare it
  * with what is on disk. Read-only. Each entry is one of:

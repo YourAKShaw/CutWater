@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * Phase 0 audit: checks a repository against the A1–A16 checklist in
  * references/init-checklist.md and classifies it. Read-only.

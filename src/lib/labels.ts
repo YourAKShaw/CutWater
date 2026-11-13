@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 /** The standard label set: loading, diffing and idempotent sync. */
 import { CutwaterError } from "./errors.ts";
 import { gh, ghJson, type ExecContext } from "./exec.ts";

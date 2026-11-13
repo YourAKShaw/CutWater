@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 // An in-memory stand-in for the parts of GitHub that cutwater talks to
 // through gh. Used directly by unit tests and through test/fake-gh/bin/gh
 // by integration tests. Unsupported commands fail loudly (exit 2).

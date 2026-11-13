@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 /** Small read-mostly GitHub helpers: reactions, status and wiki checks. */
 import { CutwaterError } from "./errors.ts";
 import { gh, ghJson, git, type ExecContext } from "./exec.ts";

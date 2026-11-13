@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * Bundle src/cli.ts into the single zero-dependency file the skill ships:
  * skills/cutwater/scripts/cutwater.mjs (ESM, Node.js 18+).
