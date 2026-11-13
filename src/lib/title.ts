@@ -220,7 +220,7 @@ export function lintTitle(title: string, opts: TitleLintOptions = {}): TitleLint
   else if (parsed.scope === "<scope>" || parsed.scope.trim() === "")
     add("scope-placeholder", "Replace `<scope>` with the module or area, e.g. `fix(exec): …`.");
   else if (!/^[a-z0-9][a-z0-9-]*$/.test(parsed.scope))
-    add("scope-case", `Scope "${parsed.scope}" must be lower-case kebab-case.`);
+    add("scope-case", "The scope must be lower-case kebab-case, e.g. `fake-gh`.");
 
   const summary = parsed.summary ?? "";
   if (summary.trim() === "") add("summary-empty", "The summary is empty.");
