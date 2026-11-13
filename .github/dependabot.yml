@@ -20,3 +20,9 @@ updates:
     groups:
       dev-tooling:
         patterns: ["*"]
+    ignore:
+      # typescript-eslint allows only typescript <6.1, and TypeScript 7.0 ships
+      # no programmatic API (#34). Remove this rule once
+      # `npm view typescript-eslint peerDependencies.typescript` allows 7.x.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
