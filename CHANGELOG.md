@@ -6,6 +6,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
+- Copyright and `SPDX-License-Identifier: Apache-2.0` headers on every owned source file, and `npm run license:check` in CI so new files cannot skip it ([#30](https://github.com/YourAKShaw/CutWater/issues/30)).
 - Issue title convention in `CONTRIBUTING.md`: `<gitmoji> [<ticket>] <type>(<scope>)[!]: <summary>`, with a gitmoji-per-type table and a tracker-linked variant for Entalpa, Jira and Linear keys ([#4](https://github.com/YourAKShaw/CutWater/issues/4)).
 - `cw lint-title` validates issue titles, including the emoji↔type pairing, an optional `--tracker` key shape and the `type:` label.
 - `cw body issue` accepts optional `trackerRefs` and renders a *Tracker refs* section.
