@@ -15,14 +15,13 @@ Ship CutWater v0.2.0 (milestone): the open `feat` issues #5–#27 and #36. Stand
 - Local branch `main`. It may be behind origin: PR #35 merged on 2026-11-13. Run `git pull --ff-only` first.
 - Merged: #28 (issue title convention), #31 (Apache-2.0 relicense), #32 (SPDX headers + `license:check`), #35 (Dependabot holds TypeScript majors). Detail: `CHANGELOG.md`, `git log`.
 - `main` has ruleset "Protect main" (id 27234130): PR + 1 approval, no force-push or deletion, 6 required CI checks (names from PR #35; CodeRabbit excluded). Only the repo Admin role can bypass.
-- GitHub App `yourakshawai`: Issues, Pull requests, Contents read/write; no Workflows or Administration. Installed on CutWater only. A bot push dry-run over HTTPS succeeded.
+- GitHub App `yourakshawai`: Issues, Pull requests, Contents read/write; no Workflows or Administration. Installed on CutWater only. Pushing branches and resolving review threads as the bot both work (tested on PR #38).
 - Checks: `npm run check` last passed on the #35 branch. Not run this session.
 
 ## Next steps
 
 1. Pick the next v0.2.0 issue (`cw status`, then `cw read issue <n>`). #36 (trust the maintainer's bot in `cw read`) is small and unblocks reading bot comments without a yes.
-2. On the next CodeRabbit review, test resolving a review thread as the bot. This has not worked so far (it failed before Contents write was granted).
-3. Before installing the App on any other repo, give that repo a default-branch ruleset first. The user applies rulesets with their own `gh`, because the bot has no Administration permission.
+2. Before installing the App on any other repo, give that repo a default-branch ruleset first. The user applies rulesets with their own `gh`, because the bot has no Administration permission.
 
 ## Open questions
 
