@@ -43,11 +43,11 @@ Every `gh` command passes `--repo <owner/name>` from preflight. Write bodies to 
 6. **Create:**
 
    ```sh
-   gh issue create --repo <owner/name> --title "✨ feat: keep sessions alive with token refresh" \
+   gh issue create --repo <owner/name> --title "✨ feat(auth): keep sessions alive with token refresh" \
      --body-file <tmp>/issue.md --label "type: feat" --label "status: in-progress" --assignee @me
    ```
 
-   Title format: `<emoji> <type>: <imperative summary>`, for example ✨ feat, 🐛 fix, 📝 docs, ♻️ refactor, 🔧 chore, ⚡ perf, ✅ test, 📦 build, 👷 ci, 🎨 style.
+   Title format: `<gitmoji> <type>(<scope>)[!]: <summary>`, at most 72 characters, for example `✨ feat(auth): …`, `🐛 fix(api): …`. In a tracker-linked repository, `<gitmoji> [<ticket>] <type>(<scope>): <summary>` with exactly one verbatim key. Check it with `cw lint-title --title "<title>"` before creating the issue. Full rules: the target repository's CONTRIBUTING, or [CutWater's issue title convention](https://github.com/YourAKShaw/CutWater/blob/main/.github/CONTRIBUTING.md).
 7. **React:** `cw react --issue <n> --content eyes` (best-effort; a failure never blocks the task).
 
 ## Phase 2: branch
@@ -56,7 +56,7 @@ Every `gh` command passes `--repo <owner/name>` from preflight. Write bodies to 
 git fetch origin
 git switch <defaultBranch>
 git pull --ff-only
-git switch -c "$(cw branch-name --type feat --issue 42 --title "keep sessions alive with token refresh")"
+git switch -c "$(cw branch-name --issue 42 --title "✨ feat(auth): keep sessions alive with token refresh")"
 ```
 
 - Format: `<login>/<type>/<issue>-<kebab>`, for example `octocat/feat/42-keep-sessions-alive-token-refresh`.
