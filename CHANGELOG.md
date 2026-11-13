@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- Issue title convention in `CONTRIBUTING.md`: `<gitmoji> [<ticket>] <type>(<scope>)[!]: <summary>`, with a gitmoji-per-type table and a tracker-linked variant for Entalpa, Jira and Linear keys ([#4](https://github.com/YourAKShaw/CutWater/issues/4)).
+- `cw lint-title` validates issue titles, including the emoji↔type pairing, an optional `--tracker` key shape and the `type:` label.
+- `cw body issue` accepts optional `trackerRefs` and renders a *Tracker refs* section.
+- An `Issue title` workflow labels non-conforming issues `needs-triage` and comments the fix once; it never edits or closes issues.
+
+### Changed
+
+- `cw branch-name` takes its type from a convention title when `--type` is omitted, and drops a leading `[ticket]` from the slug.
+- `cw lint-commit` reports a tracker key before the type as `ticket-position`.
+- Issue forms start with a scope placeholder, e.g. `🐛 fix(<scope>): `.
+
 ## [0.1.0] - 2026-11-13
 
 Initial release.
