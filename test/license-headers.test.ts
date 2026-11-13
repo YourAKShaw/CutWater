@@ -6,6 +6,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import { addHeader, checkHeaders, commentFor, hasHeader } from "../scripts/license-headers.ts";
 import { tempDir, writeFiles } from "./helpers.ts";
 
@@ -92,4 +93,9 @@ test("checks tracked files, keeps spaced names, and fixes with the creation year
 
 test("fails loudly outside a git repository", () => {
   assert.throws(() => checkHeaders(tempDir()));
+});
+
+test("this repository passes", () => {
+  const root = fileURLToPath(new URL("..", import.meta.url));
+  assert.deepEqual(checkHeaders(root).missing, []);
 });

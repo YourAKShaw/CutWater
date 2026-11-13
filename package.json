@@ -26,7 +26,8 @@
     "lint": "eslint . && prettier --check . && tsc -p tsconfig.json",
     "format": "prettier --write .",
     "evals:check": "node scripts/evals.ts check",
-    "check": "npm run validate && npm run build:check && npm run evals:check && npm test && npm run lint"
+    "license:check": "node scripts/license-headers.ts",
+    "check": "npm run validate && npm run build:check && npm run evals:check && npm run license:check && npm test && npm run lint"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

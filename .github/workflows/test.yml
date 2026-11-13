@@ -40,6 +40,8 @@ jobs:
         run: npm run build:check
       - name: Eval suites are well-formed
         run: npm run evals:check
+      - name: Source files carry the license header
+        run: npm run license:check
       - run: npm test
       - run: npm run lint
 
