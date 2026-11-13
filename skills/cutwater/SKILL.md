@@ -8,7 +8,7 @@ description: >-
   pull request for the user to review and merge. Use when the user invokes cutwater,
   asks to set up or audit a GitHub repo, start or continue a task, open an issue or PR,
   change task scope mid-work, update the wiki, or check repo status.
-license: MIT
+license: Apache-2.0
 compatibility: Requires git, GitHub CLI (gh) authenticated, Node.js 18+ for helper scripts, and network access to github.com.
 metadata:
   version: "0.1.0"

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Development tooling for the cutwater Agent Skill: a GitHub-native, issue-first SDLC workflow driven through gh and git.",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "Ayush Kumar Shaw",
   "homepage": "https://github.com/YourAKShaw/CutWater#readme",
   "repository": {
