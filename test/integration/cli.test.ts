@@ -136,6 +136,16 @@ test("exit codes follow the contract", () => {
   assert.equal(w.cli(["lint-commit", "not a commit"]).code, 1);
   assert.equal(w.cli(["lint-commit", "fix(api): handle nulls (#4)", "--issue", "4"]).code, 0);
   assert.equal(w.cli(["lint-commit", "-"], "feat: x\n\nbreaking change: y\n").code, 1);
+  assert.equal(w.cli(["lint-title", "--title", "✨ feat(api): add x"]).code, 0);
+  assert.equal(w.cli(["lint-title", "-"], "✨ [Req-004] feat(api): add x\n").code, 0);
+  const bad = w.cli(["lint-title", "--title", "feat: add x", "--json"]);
+  assert.equal(bad.code, 1);
+  assert.match(bad.stdout, /emoji-missing/);
+  assert.equal(w.cli(["lint-title", "--title", "✨ feat(api): add x", "--tracker", "x"]).code, 1);
+  assert.equal(
+    w.cli(["lint-title", "--title", "✨ feat(api): add x", "--label", "type: fix"]).code,
+    1,
+  );
   assert.equal(w.cli(["nonsense"]).code, 1);
   w.setState((state) => (state.authenticated = false));
   const pre = w.cli(["preflight", "--json"]);

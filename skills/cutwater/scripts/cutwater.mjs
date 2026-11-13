@@ -1601,6 +1601,334 @@ function scanSecrets(text) {
   return findings;
 }
 
+// src/lib/commitlint.ts
+var COMMIT_TYPES = [
+  "feat",
+  "fix",
+  "docs",
+  "style",
+  "refactor",
+  "perf",
+  "test",
+  "build",
+  "ci",
+  "chore",
+  "revert"
+];
+var HEADER = /^(?<type>[A-Za-z]+)(?:\((?<scope>[^()]*)\))?(?<bang>!)?: (?<subject>.*)$/;
+var SHORTCODE = /^:[a-z0-9_+-]+:\s+/;
+var UNICODE_EMOJI = new RegExp("^(?:\\p{Extended_Pictographic}|\\p{Emoji_Presentation})(?:\\uFE0F|\\u200D|\\p{Extended_Pictographic})*\\s+", "u");
+var LEADING_EMOJI = new RegExp("^(?::[a-z0-9_+-]+:|\\p{Extended_Pictographic})", "u");
+function stripGitmoji(subject) {
+  const match = SHORTCODE.exec(subject) ?? UNICODE_EMOJI.exec(subject);
+  if (!match) return { emoji: null, text: subject };
+  return { emoji: match[0].trim(), text: subject.slice(match[0].length) };
+}
+function lintCommit(raw, opts = {}) {
+  const types = opts.types ?? COMMIT_TYPES;
+  const maxHeader = opts.maxHeader ?? 100;
+  const errors = [];
+  const warnings = [];
+  const lines = raw.replace(/\r\n?/g, "\n").split("\n").filter((line) => !line.startsWith("# ") && line !== "#");
+  while (lines.length > 0 && lines[lines.length - 1]?.trim() === "") lines.pop();
+  const header = lines[0] ?? "";
+  const result = {
+    valid: false,
+    header,
+    type: null,
+    scope: null,
+    breaking: false,
+    errors,
+    warnings
+  };
+  if (header.trim() === "") {
+    errors.push({ rule: "header-empty", message: "The commit message is empty." });
+    return result;
+  }
+  if (/^Merge /.test(header)) {
+    errors.push({ rule: "merge-commit", message: "cutwater never creates merge commits." });
+    return result;
+  }
+  const match = HEADER.exec(header);
+  if (!match?.groups) {
+    if (/^\[[^\]]*\]\s*[a-z]+(\([^)]*\))?!?:/i.test(header)) {
+      errors.push({
+        rule: "ticket-position",
+        message: "Tracker keys never go in a commit header; move it to a `Refs: KEY-123` footer."
+      });
+      return result;
+    }
+    const hint = LEADING_EMOJI.test(header) ? " Put the emoji after the colon: `feat(scope): :sparkles: subject`." : " Expected `type(scope): subject`.";
+    errors.push({ rule: "header-format", message: `Header is not a Conventional Commit.${hint}` });
+    return result;
+  }
+  const { type = "", scope, bang, subject = "" } = match.groups;
+  result.type = type;
+  result.scope = scope ?? null;
+  if (type !== type.toLowerCase()) {
+    errors.push({ rule: "type-case", message: `Type "${type}" must be lower case.` });
+  }
+  if (!types.includes(type.toLowerCase())) {
+    errors.push({
+      rule: "type-enum",
+      message: `Type "${type}" must be one of: ${types.join(", ")}.`
+    });
+  }
+  if (scope !== void 0) {
+    if (scope.trim() === "")
+      errors.push({ rule: "scope-empty", message: "Scope parentheses are empty." });
+    else if (!/^[a-z0-9][a-z0-9._/-]*$/.test(scope)) {
+      errors.push({
+        rule: "scope-case",
+        message: `Scope "${scope}" must be lower-case kebab-case.`
+      });
+    }
+  }
+  const { text } = stripGitmoji(subject);
+  if (text.trim() === "") {
+    errors.push({ rule: "subject-empty", message: "The subject is empty." });
+  } else {
+    if (/\.$/.test(text))
+      errors.push({ rule: "subject-full-stop", message: "Do not end the subject with a period." });
+    if (/^[A-Z][a-z]/.test(text)) {
+      warnings.push({
+        rule: "subject-case",
+        message: "Start the subject with a lower-case imperative verb."
+      });
+    }
+    if (text !== text.trimStart())
+      errors.push({
+        rule: "subject-whitespace",
+        message: "Remove the extra space before the subject."
+      });
+  }
+  if (header.length > maxHeader) {
+    errors.push({
+      rule: "header-max-length",
+      message: `Header is ${header.length} characters; the limit is ${maxHeader}.`
+    });
+  } else if (header.length > 72) {
+    warnings.push({
+      rule: "header-length",
+      message: `Header is ${header.length} characters; keep it at 72 or fewer.`
+    });
+  }
+  if (lines.length > 1 && (lines[1] ?? "").trim() !== "") {
+    errors.push({
+      rule: "body-leading-blank",
+      message: "Leave a blank line between the header and the body."
+    });
+  }
+  let breakingFooter = false;
+  for (const line of lines.slice(1)) {
+    if (/^BREAKING[ -]CHANGE: \S/.test(line)) {
+      breakingFooter = true;
+    } else if (/^breaking[ -]change\s*:/i.test(line)) {
+      errors.push({
+        rule: "breaking-change-case",
+        message: "Write the footer token exactly as `BREAKING CHANGE:` or `BREAKING-CHANGE:` (upper case)."
+      });
+    }
+  }
+  result.breaking = bang === "!" || breakingFooter;
+  if (opts.issue !== void 0 && opts.issue !== null) {
+    const ref = new RegExp(`#${opts.issue}(?!\\d)`);
+    const footerRef = lines.slice(1).some((line) => /^(Refs|Closes|Fixes|Resolves|Part-of):?\s/i.test(line) && ref.test(line));
+    if (!ref.test(header) && !footerRef) {
+      errors.push({
+        rule: "issue-reference",
+        message: `Reference the issue: add "(#${opts.issue})" to the header or a "Refs: #${opts.issue}" footer.`
+      });
+    }
+  }
+  result.valid = errors.length === 0;
+  return result;
+}
+
+// src/lib/title.ts
+var GITMOJI_BY_TYPE = {
+  feat: ["✨", "🔒️", "🗃️", "🚸"],
+  fix: ["🐛", "🔒️", "🚑️", "🩹"],
+  docs: ["📝", "🏗️", "🔍️"],
+  style: ["🎨"],
+  refactor: ["♻️", "🔥", "🚚"],
+  perf: ["⚡️"],
+  test: ["✅", "🧪", "📊"],
+  build: ["📦️", "⬆️", "⬇️"],
+  ci: ["👷", "💚"],
+  chore: ["🔧", "🔖", "🙈"],
+  revert: ["⏪️"]
+};
+var TRACKERS = ["none", "entalpa", "jira", "linear"];
+var TICKET_SHAPES = {
+  none: /^[A-Za-z][A-Za-z0-9]*-[0-9]+$/,
+  entalpa: /^Req-[0-9]{3,}$/,
+  jira: /^[A-Z][A-Z0-9]*-[1-9][0-9]*$/,
+  linear: /^[A-Z][A-Z0-9]*-[1-9][0-9]*$/
+};
+var MAX_TITLE_LENGTH = 72;
+var MAX_TICKET_LENGTH = 20;
+var PROPER_NOUNS = /* @__PURE__ */ new Set([
+  "GitHub",
+  "GitLab",
+  "Git",
+  "Jira",
+  "Linear",
+  "Entalpa",
+  "Node",
+  "TypeScript",
+  "JavaScript",
+  "Python",
+  "Windows",
+  "macOS",
+  "Linux"
+]);
+var strip = (emoji) => emoji.replace(/\uFE0F/g, "");
+var KNOWN_EMOJI = new Set(Object.values(GITMOJI_BY_TYPE).flat().map(strip));
+var EMOJI_CLUSTER = new RegExp("^(?:\\p{Extended_Pictographic}|\\p{Emoji_Presentation})\\ufe0f?(?:\\u200d(?:\\p{Extended_Pictographic}|\\p{Emoji_Presentation})\\ufe0f?)*", "u");
+var SHORTCODE2 = /^:[a-z0-9_+-]+:/;
+var TICKET = /^\[(?<key>[^\]]*)\] /;
+var HEADER2 = /^(?<type>[A-Za-z]+)(?:\((?<scope>[^()]*)\))?(?<bang>!)?: (?<summary>.*)$/;
+var HIDDEN = (
+  // eslint-disable-next-line no-control-regex
+  /[\u0000-\u001f\u007f-\u009f\u200b\u200c\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/u
+);
+function parseTitle(title) {
+  const parsed = {
+    emoji: null,
+    ticket: null,
+    type: null,
+    scope: null,
+    breaking: false,
+    summary: null
+  };
+  let rest = title;
+  const emoji = EMOJI_CLUSTER.exec(rest);
+  if (emoji) {
+    parsed.emoji = emoji[0];
+    rest = rest.slice(emoji[0].length).replace(/^ /, "");
+  }
+  const ticket = TICKET.exec(rest);
+  if (ticket?.groups) {
+    parsed.ticket = ticket.groups.key ?? "";
+    rest = rest.slice(ticket[0].length);
+  }
+  const header = HEADER2.exec(rest);
+  if (header?.groups) {
+    parsed.type = header.groups.type ?? null;
+    parsed.scope = header.groups.scope ?? null;
+    parsed.breaking = header.groups.bang === "!";
+    parsed.summary = header.groups.summary ?? "";
+  }
+  return parsed;
+}
+function lintTitle(title, opts = {}) {
+  const tracker = opts.tracker ?? "none";
+  const errors = [];
+  const add = (rule, message) => errors.push({ rule, message });
+  const parsed = parseTitle(title);
+  const result = { ...parsed, valid: false, title, errors };
+  if (title.trim() === "") {
+    add("title-empty", "The title is empty.");
+    return result;
+  }
+  if (HIDDEN.test(title)) {
+    add("title-hidden-chars", "Remove control, zero-width or bidi characters from the title.");
+    return result;
+  }
+  if (title !== title.trim() || / {2}/.test(title)) {
+    add("title-whitespace", "Use single spaces and no leading or trailing whitespace.");
+  }
+  if (!parsed.emoji) {
+    if (SHORTCODE2.test(title))
+      add("emoji-shortcode", "Use the Unicode emoji, not a :shortcode: (titles render raw).");
+    else if (/^\[/.test(title))
+      add("ticket-position", "Put the gitmoji first: `✨ [KEY-1] feat(scope): …`.");
+    else add("emoji-missing", "Start the title with one gitmoji, e.g. `✨ feat(scope): …`.");
+  } else {
+    const after = title.slice(parsed.emoji.length);
+    if (EMOJI_CLUSTER.test(after.trimStart())) add("emoji-multiple", "Use exactly one gitmoji.");
+    else if (!after.startsWith(" ")) add("emoji-space", "Put one space after the gitmoji.");
+    if (!KNOWN_EMOJI.has(strip(parsed.emoji)))
+      add("emoji-unknown", "Use a gitmoji from the CONTRIBUTING table.");
+  }
+  if (parsed.ticket !== null) {
+    const key = parsed.ticket;
+    if (/^\s*(n\/?a|tbd|none|-+)\s*$/i.test(key))
+      add("ticket-placeholder", "Drop the placeholder and use the standard form.");
+    else if (key.length > MAX_TICKET_LENGTH)
+      add("ticket-length", `Ticket keys are at most ${MAX_TICKET_LENGTH} characters.`);
+    else if (!TICKET_SHAPES[tracker].test(key))
+      add(
+        "ticket-format",
+        `The ticket does not match the ${tracker === "none" ? "KEY-123" : tracker} key shape; copy it verbatim.`
+      );
+  }
+  const afterPrefix = title.slice((parsed.emoji ?? "").length).trimStart();
+  if (/^\[[^\]]*\]\s*\[/.test(afterPrefix))
+    add("ticket-multiple", "Use exactly one ticket; list the rest under Tracker refs.");
+  if (parsed.summary !== null && /\[[A-Za-z][A-Za-z0-9]*-[0-9]+\]/.test(parsed.summary))
+    add("ticket-position", "Move the ticket between the gitmoji and the type.");
+  if (parsed.type === null) {
+    if (/^\s*(epic|spike|wip)\b/i.test(afterPrefix.replace(/^\[[^\]]*\]\s*/, "")))
+      add("kind-in-title", "Epic, spike and WIP are labels (`kind: …`), not title words.");
+    if (!errors.some((e) => e.rule.startsWith("ticket-")))
+      add("header-format", "Expected `<gitmoji> <type>(<scope>): <summary>`.");
+    result.valid = false;
+    return result;
+  }
+  const type = parsed.type;
+  if (/^(epic|spike|wip|adr)$/i.test(type)) {
+    add("kind-in-title", "Epic, spike and ADR are labels (`kind: …`), not the type.");
+    return result;
+  }
+  if (type !== type.toLowerCase()) add("type-case", `Type "${type}" must be lower case.`);
+  const lower = type.toLowerCase();
+  if (!COMMIT_TYPES.includes(lower)) {
+    add("type-enum", `Type "${type}" must be one of: ${COMMIT_TYPES.join(", ")}.`);
+  } else {
+    if (parsed.emoji && KNOWN_EMOJI.has(strip(parsed.emoji))) {
+      const allowed = GITMOJI_BY_TYPE[lower].map(strip);
+      if (!allowed.includes(strip(parsed.emoji)))
+        add(
+          "emoji-type-mismatch",
+          `For ${lower}, use one of: ${GITMOJI_BY_TYPE[lower].join(" ")}.`
+        );
+    }
+    if (opts.labelType && opts.labelType !== lower)
+      add(
+        "type-label-mismatch",
+        `The title says ${lower} but the label is type: ${opts.labelType}.`
+      );
+  }
+  if (parsed.scope === null) add("scope-missing", "Add a scope: `type(scope): …`.");
+  else if (parsed.scope === "<scope>" || parsed.scope.trim() === "")
+    add("scope-placeholder", "Replace `<scope>` with the module or area, e.g. `fix(exec): …`.");
+  else if (!/^[a-z0-9][a-z0-9-]*$/.test(parsed.scope))
+    add("scope-case", "The scope must be lower-case kebab-case, e.g. `fake-gh`.");
+  const summary = parsed.summary ?? "";
+  if (summary.trim() === "") add("summary-empty", "The summary is empty.");
+  else {
+    const first = summary.split(/\s/)[0] ?? "";
+    if (/^[A-Z]/.test(first) && !PROPER_NOUNS.has(first) && first !== first.toUpperCase())
+      add("summary-case", "Start the summary with a lower-case imperative verb.");
+    if (/\.$/.test(summary)) add("summary-full-stop", "Do not end the title with a period.");
+    if (/(?<![A-Za-z0-9&])#\d+\b/.test(summary))
+      add("summary-issue-number", "Drop the issue number.");
+    if (/\[(wip|draft)\]|\bepic:/i.test(summary))
+      add("kind-in-title", "WIP, draft and epic are labels, not title words.");
+  }
+  const core = afterPrefix.replace(TICKET, "");
+  const length = [...core].length;
+  if (length > MAX_TITLE_LENGTH)
+    add(
+      "title-length",
+      `\`type(scope): summary\` is ${length} characters; the limit is ${MAX_TITLE_LENGTH}.`
+    );
+  result.valid = errors.length === 0;
+  return result;
+}
+
 // src/lib/body.ts
 var ISSUE_KINDS = ["feature", "bug", "chore", "docs"];
 function issueKindFor(type) {
@@ -1642,6 +1970,26 @@ function assertNoSecrets(text) {
     );
   }
 }
+function isHttpsUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname !== "";
+  } catch {
+    return false;
+  }
+}
+function renderTrackerRefs(refs) {
+  const bad = refs.filter(
+    (ref) => typeof ref?.key !== "string" || ref.key.length > MAX_TICKET_LENGTH || !TICKET_SHAPES.none.test(ref.key) || typeof ref.url !== "string" || !/^https:\/\/[^\s<>()[\]]+$/.test(ref.url) || !isHttpsUrl(ref.url)
+  );
+  if (bad.length > 0) {
+    throw new CutwaterError(
+      "VALIDATION",
+      "Each tracker ref needs a verbatim key such as Req-004 and an https URL without spaces"
+    );
+  }
+  return refs.map((ref) => `- ${ref.key}: ${ref.url}`).join("\n");
+}
 function renderIssueBody(kind, input) {
   const sections = skeletonSections(kind);
   const known = new Set(sections.map((section) => section.heading));
@@ -1665,6 +2013,9 @@ function renderIssueBody(kind, input) {
       isEmpty(value) ? "_None._" : renderValue(section.heading, value),
       ""
     );
+  }
+  if (input.trackerRefs && input.trackerRefs.length > 0) {
+    out.push("## Tracker refs", "", renderTrackerRefs(input.trackerRefs), "");
   }
   const body = `${out.join("\n").trimEnd()}
 `;
@@ -1756,7 +2107,7 @@ var STOP_WORDS = /* @__PURE__ */ new Set([
 ]);
 function slugWords(title) {
   const ascii = title.normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^\x20-\x7e]/g, " ").toLowerCase();
-  const withoutPrefix = ascii.replace(/^\s*[a-z]+(\([^)]*\))?!?:\s*/, "");
+  const withoutPrefix = ascii.replace(/^\s*\[[^\]]*\]\s*/, "").replace(/^\s*[a-z]+(\([^)]*\))?!?:\s*/, "");
   const words = withoutPrefix.split(/[^a-z0-9]+/).filter((word) => word !== "");
   const meaningful = words.filter((word) => !STOP_WORDS.has(word));
   return (meaningful.length > 0 ? meaningful : words).slice(0, MAX_SLUG_WORDS);
@@ -1765,7 +2116,22 @@ function branchName(input) {
   if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(input.login)) {
     throw new CutwaterError("USAGE", `"${input.login}" is not a valid GitHub login`);
   }
-  if (!BRANCH_TYPES.includes(input.type)) {
+  const parsedType = parseTitle(input.title).type?.toLowerCase() ?? null;
+  const titleType = parsedType && BRANCH_TYPES.includes(parsedType) ? parsedType : null;
+  const type = input.type ?? titleType;
+  if (!type) {
+    throw new CutwaterError(
+      "USAGE",
+      "Pass --type, or a title in the convention form `✨ feat(scope): summary`"
+    );
+  }
+  if (input.type && titleType && input.type !== titleType) {
+    throw new CutwaterError(
+      "USAGE",
+      `--type ${input.type} disagrees with the title's type ${titleType}`
+    );
+  }
+  if (!BRANCH_TYPES.includes(type)) {
     throw new CutwaterError("USAGE", `Branch type must be one of: ${BRANCH_TYPES.join(", ")}`);
   }
   if (!Number.isInteger(input.issue) || input.issue < 0) {
@@ -1774,7 +2140,7 @@ function branchName(input) {
       "The issue number must be a whole number (0 only for repo setup)"
     );
   }
-  const prefix = `${input.login}/${input.type}/${input.issue}`;
+  const prefix = `${input.login}/${type}/${input.issue}`;
   const words = slugWords(input.title);
   if (words.length === 0) {
     throw new CutwaterError(
@@ -1789,143 +2155,6 @@ function branchName(input) {
   let slug = words.join("-");
   if (slug.length > budget) slug = slug.slice(0, budget).replace(/-+$/, "");
   return `${prefix}-${slug}`;
-}
-
-// src/lib/commitlint.ts
-var COMMIT_TYPES = [
-  "feat",
-  "fix",
-  "docs",
-  "style",
-  "refactor",
-  "perf",
-  "test",
-  "build",
-  "ci",
-  "chore",
-  "revert"
-];
-var HEADER = /^(?<type>[A-Za-z]+)(?:\((?<scope>[^()]*)\))?(?<bang>!)?: (?<subject>.*)$/;
-var SHORTCODE = /^:[a-z0-9_+-]+:\s+/;
-var UNICODE_EMOJI = new RegExp("^(?:\\p{Extended_Pictographic}|\\p{Emoji_Presentation})(?:\\uFE0F|\\u200D|\\p{Extended_Pictographic})*\\s+", "u");
-var LEADING_EMOJI = new RegExp("^(?::[a-z0-9_+-]+:|\\p{Extended_Pictographic})", "u");
-function stripGitmoji(subject) {
-  const match = SHORTCODE.exec(subject) ?? UNICODE_EMOJI.exec(subject);
-  if (!match) return { emoji: null, text: subject };
-  return { emoji: match[0].trim(), text: subject.slice(match[0].length) };
-}
-function lintCommit(raw, opts = {}) {
-  const types = opts.types ?? COMMIT_TYPES;
-  const maxHeader = opts.maxHeader ?? 100;
-  const errors = [];
-  const warnings = [];
-  const lines = raw.replace(/\r\n?/g, "\n").split("\n").filter((line) => !line.startsWith("# ") && line !== "#");
-  while (lines.length > 0 && lines[lines.length - 1]?.trim() === "") lines.pop();
-  const header = lines[0] ?? "";
-  const result = {
-    valid: false,
-    header,
-    type: null,
-    scope: null,
-    breaking: false,
-    errors,
-    warnings
-  };
-  if (header.trim() === "") {
-    errors.push({ rule: "header-empty", message: "The commit message is empty." });
-    return result;
-  }
-  if (/^Merge /.test(header)) {
-    errors.push({ rule: "merge-commit", message: "cutwater never creates merge commits." });
-    return result;
-  }
-  const match = HEADER.exec(header);
-  if (!match?.groups) {
-    const hint = LEADING_EMOJI.test(header) ? " Put the emoji after the colon: `feat(scope): :sparkles: subject`." : " Expected `type(scope): subject`.";
-    errors.push({ rule: "header-format", message: `Header is not a Conventional Commit.${hint}` });
-    return result;
-  }
-  const { type = "", scope, bang, subject = "" } = match.groups;
-  result.type = type;
-  result.scope = scope ?? null;
-  if (type !== type.toLowerCase()) {
-    errors.push({ rule: "type-case", message: `Type "${type}" must be lower case.` });
-  }
-  if (!types.includes(type.toLowerCase())) {
-    errors.push({
-      rule: "type-enum",
-      message: `Type "${type}" must be one of: ${types.join(", ")}.`
-    });
-  }
-  if (scope !== void 0) {
-    if (scope.trim() === "")
-      errors.push({ rule: "scope-empty", message: "Scope parentheses are empty." });
-    else if (!/^[a-z0-9][a-z0-9._/-]*$/.test(scope)) {
-      errors.push({
-        rule: "scope-case",
-        message: `Scope "${scope}" must be lower-case kebab-case.`
-      });
-    }
-  }
-  const { text } = stripGitmoji(subject);
-  if (text.trim() === "") {
-    errors.push({ rule: "subject-empty", message: "The subject is empty." });
-  } else {
-    if (/\.$/.test(text))
-      errors.push({ rule: "subject-full-stop", message: "Do not end the subject with a period." });
-    if (/^[A-Z][a-z]/.test(text)) {
-      warnings.push({
-        rule: "subject-case",
-        message: "Start the subject with a lower-case imperative verb."
-      });
-    }
-    if (text !== text.trimStart())
-      errors.push({
-        rule: "subject-whitespace",
-        message: "Remove the extra space before the subject."
-      });
-  }
-  if (header.length > maxHeader) {
-    errors.push({
-      rule: "header-max-length",
-      message: `Header is ${header.length} characters; the limit is ${maxHeader}.`
-    });
-  } else if (header.length > 72) {
-    warnings.push({
-      rule: "header-length",
-      message: `Header is ${header.length} characters; keep it at 72 or fewer.`
-    });
-  }
-  if (lines.length > 1 && (lines[1] ?? "").trim() !== "") {
-    errors.push({
-      rule: "body-leading-blank",
-      message: "Leave a blank line between the header and the body."
-    });
-  }
-  let breakingFooter = false;
-  for (const line of lines.slice(1)) {
-    if (/^BREAKING[ -]CHANGE: \S/.test(line)) {
-      breakingFooter = true;
-    } else if (/^breaking[ -]change\s*:/i.test(line)) {
-      errors.push({
-        rule: "breaking-change-case",
-        message: "Write the footer token exactly as `BREAKING CHANGE:` or `BREAKING-CHANGE:` (upper case)."
-      });
-    }
-  }
-  result.breaking = bang === "!" || breakingFooter;
-  if (opts.issue !== void 0 && opts.issue !== null) {
-    const ref = new RegExp(`#${opts.issue}(?!\\d)`);
-    const footerRef = lines.slice(1).some((line) => /^(Refs|Closes|Fixes|Resolves|Part-of):?\s/i.test(line) && ref.test(line));
-    if (!ref.test(header) && !footerRef) {
-      errors.push({
-        rule: "issue-reference",
-        message: `Reference the issue: add "(#${opts.issue})" to the header or a "Refs: #${opts.issue}" footer.`
-      });
-    }
-  }
-  result.valid = errors.length === 0;
-  return result;
 }
 
 // src/lib/read.ts
@@ -2919,8 +3148,10 @@ Task loop (Phases 1-5)
                                     non-collaborator text withheld unless the user says yes
   read run RUN_ID                   tail of failed CI steps, fenced and scanned
   read merged [--limit N]           titles of merged PRs (no bodies), fenced and scanned
-  branch-name --type T --issue N --title TEXT [--login L]
+  branch-name [--type T] --issue N --title TEXT [--login L]
+                                    type defaults to the convention title's type
   lint-commit [MESSAGE | --file FILE | -] [--issue N]
+  lint-title [TITLE | --title TEXT | -] [--tracker none|entalpa|jira|linear] [--label "type: T"]
   body issue --type T --data FILE [--out FILE]
   body pr --data FILE [--out FILE]
   scan-secrets [FILE | -]
@@ -3280,6 +3511,30 @@ function cmdLintCommit(env, rest) {
   );
   return result.valid ? EXIT.OK : EXIT.ERROR;
 }
+function cmdLintTitle(env, rest) {
+  const flag = stringFlag(env.args, "title");
+  let title;
+  if (flag !== null) title = flag;
+  else if (rest[0] === "-" || rest.length === 0) title = readInput("-").replace(/\r?\n$/, "");
+  else title = rest.join(" ");
+  const tracker = stringFlag(env.args, "tracker") ?? "none";
+  if (!TRACKERS.includes(tracker))
+    throw new CutwaterError("USAGE", `--tracker must be one of: ${TRACKERS.join(", ")}`);
+  const label = stringFlag(env.args, "label");
+  const result = lintTitle(title, {
+    tracker,
+    labelType: label ? label.replace(/^type:\s*/, "") : null
+  });
+  print(
+    env.out,
+    result,
+    () => [
+      result.valid ? "✅ title follows the convention" : "❌ title does not follow the convention",
+      ...result.errors.map((issue) => `  error   ${issue.rule}: ${issue.message}`)
+    ].join("\n")
+  );
+  return result.valid ? EXIT.OK : EXIT.ERROR;
+}
 async function cmdBranchName(env) {
   let login = stringFlag(env.args, "login");
   if (!login) {
@@ -3291,7 +3546,7 @@ async function cmdBranchName(env) {
     throw new CutwaterError("USAGE", "--issue is required (use 0 only for repo setup)");
   const name = branchName({
     login,
-    type: requireFlag(env.args, "type"),
+    type: stringFlag(env.args, "type"),
     issue,
     title: requireFlag(env.args, "title")
   });
@@ -3305,7 +3560,8 @@ function cmdBody(env, sub) {
     const type = requireFlag(env.args, "type");
     const kind = ISSUE_KINDS.includes(type) ? type : issueKindFor(type);
     body = renderIssueBody(kind, {
-      sections: data.sections ?? data
+      sections: data.sections ?? data,
+      trackerRefs: data.sections ? data.trackerRefs : void 0
     });
   } else if (sub === "pr") {
     body = renderPrBody(data);
@@ -3387,6 +3643,11 @@ async function run2(argv) {
       return cmdManifest(env, sub);
     case "lint-commit":
       return cmdLintCommit(
+        env,
+        [sub, ...rest].filter((part) => part !== void 0)
+      );
+    case "lint-title":
+      return cmdLintTitle(
         env,
         [sub, ...rest].filter((part) => part !== void 0)
       );

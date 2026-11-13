@@ -72,3 +72,12 @@ test("strips shortcode and unicode gitmoji", () => {
   assert.deepEqual(stripGitmoji("♻️ tidy"), { emoji: "♻️", text: "tidy" });
   assert.deepEqual(stripGitmoji("plain"), { emoji: null, text: "plain" });
 });
+
+test("accepts a tracker Refs trailer and rejects a ticket before the type", () => {
+  assert.deepEqual(
+    rules("feat(install): back up hook config (#9)\n\nWhy.\n\nRefs: Req-004\nCloses #9", 9),
+    [],
+  );
+  assert.deepEqual(rules("feat(api): add x\n\nRefs: Req-004, #9", 9), []);
+  assert.deepEqual(rules("[Req-004] feat(install): back up hook config"), ["ticket-position"]);
+});

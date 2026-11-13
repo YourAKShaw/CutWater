@@ -1,6 +1,6 @@
 name: 🐛 Bug report
 description: Something is broken or behaves differently from what it should.
-title: "🐛 fix: "
+title: "🐛 fix(<scope>): "
 labels: ["{{labelFix}}"]
 body:
   - type: markdown

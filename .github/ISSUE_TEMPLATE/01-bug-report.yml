@@ -1,6 +1,6 @@
 name: 🐛 Bug report
 description: The skill guided an agent wrongly, the helper failed, or a template is broken.
-title: "🐛 fix: "
+title: "🐛 fix(<scope>): "
 labels: ["type: fix"]
 body:
   - type: markdown

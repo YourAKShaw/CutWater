@@ -1,6 +1,6 @@
 name: ✨ Feature request
 description: Propose a new capability or a change to existing behavior.
-title: "✨ feat: "
+title: "✨ feat(<scope>): "
 labels: ["{{labelFeat}}"]
 body:
   - type: markdown

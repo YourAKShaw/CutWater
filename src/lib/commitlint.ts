@@ -87,6 +87,13 @@ export function lintCommit(raw: string, opts: LintOptions = {}): LintResult {
 
   const match = HEADER.exec(header);
   if (!match?.groups) {
+    if (/^\[[^\]]*\]\s*[a-z]+(\([^)]*\))?!?:/i.test(header)) {
+      errors.push({
+        rule: "ticket-position",
+        message: "Tracker keys never go in a commit header; move it to a `Refs: KEY-123` footer.",
+      });
+      return result;
+    }
     const hint = LEADING_EMOJI.test(header)
       ? " Put the emoji after the colon: `feat(scope): :sparkles: subject`."
       : " Expected `type(scope): subject`.";

@@ -1,6 +1,6 @@
 name: 🔧 Chore or refactor
 description: Maintenance, refactoring, build, CI, test or performance work with no new user-facing feature.
-title: "🔧 chore: "
+title: "🔧 chore(<scope>): "
 labels: ["{{labelChore}}"]
 body:
   - type: markdown
