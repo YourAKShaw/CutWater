@@ -1,0 +1,66 @@
+name: Issue title
+
+# Labels issues whose title breaks the convention in CONTRIBUTING and
+# comments the fix once. It never edits, closes or retitles an issue.
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue-title-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check the issue title
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      # The issues event always runs the default branch's code, never the reporter's.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - name: Lint the title and label or unlabel the issue
+        env:
+          # The title is untrusted: pass it through the environment, never ${{ }} in run.
+          TITLE: ${{ github.event.issue.title }}
+          ISSUE: ${{ github.event.issue.number }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$TITLE" | node skills/cutwater/scripts/cutwater.mjs lint-title - --json > result.json || true
+          valid=$(node -e 'const r=JSON.parse(require("fs").readFileSync("result.json","utf8"));process.stdout.write(String(r.valid===true))')
+          marker='<!-- cutwater:issue-title -->'
+          if [ "$valid" = "true" ]; then
+            gh issue edit "$ISSUE" --remove-label needs-triage >/dev/null 2>&1 || true
+            exit 0
+          fi
+          gh label create needs-triage --color ededed \
+            --description "Needs a maintainer to triage (e.g. fix the issue title)" >/dev/null 2>&1 || true
+          gh issue edit "$ISSUE" --add-label needs-triage
+          already=$(gh api "repos/$GH_REPO/issues/$ISSUE/comments" --paginate \
+            --jq "[.[] | select(.user.login == \"github-actions[bot]\" and (.body | contains(\"$marker\")))] | length")
+          if [ "$already" = "0" ]; then
+            node -e '
+              const r = JSON.parse(require("fs").readFileSync("result.json", "utf8"));
+              const lines = (r.errors ?? []).map((e) => `- \`${e.rule}\`: ${e.message}`);
+              process.stdout.write([
+                process.argv[1],
+                "This title does not follow the [issue title convention](../blob/HEAD/.github/CONTRIBUTING.md), for example `🐛 fix(exec): handle a missing token`:",
+                "",
+                ...lines,
+                "",
+                "A maintainer will fix it at triage; you can also edit the title yourself.",
+              ].join("\n"));
+            ' "$marker" > comment.md
+            gh issue comment "$ISSUE" --body-file comment.md
+          fi
