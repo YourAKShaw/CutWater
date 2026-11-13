@@ -7,6 +7,7 @@
 | Action SHAs in this repository's workflows | Weekly (Dependabot) | Review and merge Dependabot's `ci(github)` PRs |
 | Action SHAs in the **scaffolded** templates (`assets/workflows/*.yml`) | Monthly, and on any security advisory | `gh api repos/<action>/releases/latest --jq .tag_name`, then `gh api repos/<action>/commits/<tag> --jq .sha`; update the SHA and the version comment in every template |
 | npm dev tooling | Monthly (Dependabot) | Merge, run `npm run build`, commit the bundle if it changed |
+| TypeScript major hold | On each typescript-eslint release | Dependabot skips TypeScript majors ([#34](https://github.com/YourAKShaw/CutWater/issues/34)). When `npm view typescript-eslint peerDependencies.typescript` allows 7.x, remove the `ignore` rule from `.github/dependabot.yml` and let Dependabot raise the bump |
 | Contributor Covenant | On a new version | Fetch the upstream text from EthicalSource/contributor_covenant, re-apply the `{{reportingMethod}}` placeholder, and remove the editing note |
 | License texts | Rarely | `gh api licenses/<id> --jq .body > assets/licenses/<ID>.txt` |
 | gh compatibility | On each gh release | Run the integration tests, and spot-check the flags in `references/gh-commands.md` against `gh <command> --help` |
