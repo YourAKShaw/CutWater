@@ -125,9 +125,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   for (const file of report.fixed) console.log(`+ ${file}`);
   if (report.fixed.length > 0) {
     // --fix edits the working tree only; the index still holds the old content.
+    // Literal pathspecs so a name like src/[id].ts cannot also stage src/i.ts.
     const quoted = report.fixed.map((file) => `'${file.replace(/'/g, "'\\''")}'`).join(" ");
     console.log(
-      `Stage the fixed files so the commit includes the headers:\n  git add -- ${quoted}`,
+      `Stage the fixed files so the commit includes the headers:\n  git --literal-pathspecs add -- ${quoted}`,
     );
   }
   for (const file of report.missing) console.error(`✖ ${file}: missing copyright or SPDX header`);

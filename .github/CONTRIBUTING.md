@@ -202,6 +202,6 @@ Every source file the maintainer owns starts with this header, in the file's com
 - **Year:** the year the file was first committed. Never bump years in bulk.
 - **Skipped:** templates under `skills/cutwater/assets/` (they are copied into other people's repositories), `LICENSE` and `NOTICE`, Markdown, JSON, SVG, plain text and `.nvmrc`.
 - **Generated:** `skills/cutwater/scripts/cutwater.mjs` gets its header from the esbuild banner in `scripts/build.ts`; never add it by hand.
-- **Fix:** `git add` the new file, run `node scripts/license-headers.ts --fix`, then `git add` the file again so the commit includes the header. The check only looks at tracked files.
+- **Fix:** `git add` the new file, run `node scripts/license-headers.ts --fix`, then stage the file again with the `git --literal-pathspecs add -- …` command it prints, so the commit includes the header. The check only looks at tracked files.
 
 Everyone taking part follows the [Code of Conduct](../CODE_OF_CONDUCT.md).
