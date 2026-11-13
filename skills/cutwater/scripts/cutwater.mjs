@@ -1775,6 +1775,13 @@ function lintCommit(raw, opts = {}) {
   }
   const match = HEADER.exec(header);
   if (!match?.groups) {
+    if (/^\[[^\]]*\]\s*[a-z]+(\([^)]*\))?!?:/i.test(header)) {
+      errors.push({
+        rule: "ticket-position",
+        message: "Tracker keys never go in a commit header; move it to a `Refs: KEY-123` footer."
+      });
+      return result;
+    }
     const hint = LEADING_EMOJI.test(header) ? " Put the emoji after the colon: `feat(scope): :sparkles: subject`." : " Expected `type(scope): subject`.";
     errors.push({ rule: "header-format", message: `Header is not a Conventional Commit.${hint}` });
     return result;
