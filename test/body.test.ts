@@ -103,3 +103,28 @@ test("bodies containing credentials are refused", () => {
     (e: unknown) => code(e) === "SECRET",
   );
 });
+
+test("emits Tracker refs only when given, and validates each ref", () => {
+  const sections = {
+    Context: "c",
+    Goal: "g",
+    "Acceptance criteria": ["a"],
+    "Task checklist": ["t"],
+  };
+  assert.doesNotMatch(renderIssueBody("feature", { sections }), /Tracker refs/);
+  const body = renderIssueBody("feature", {
+    sections,
+    trackerRefs: [{ key: "Req-004", url: "https://entalpa.example/req/4" }],
+  });
+  assert.match(body, /## Tracker refs\n\n- Req-004: https:\/\/entalpa\.example\/req\/4\n$/);
+  for (const ref of [
+    { key: "Req 004", url: "https://x.example" },
+    { key: "Req-004", url: "javascript:alert(1)" },
+    { key: "Req-004", url: "https://x.example/a b" },
+  ]) {
+    assert.throws(
+      () => renderIssueBody("feature", { sections, trackerRefs: [ref] }),
+      CutwaterError,
+    );
+  }
+});

@@ -7,6 +7,7 @@
 import { CutwaterError } from "./errors.ts";
 import { scanSecrets } from "./secrets.ts";
 import { readAsset } from "./templates.ts";
+import { MAX_TICKET_LENGTH, TICKET_SHAPES } from "./title.ts";
 
 export const ISSUE_KINDS = ["feature", "bug", "chore", "docs"] as const;
 export type IssueKind = (typeof ISSUE_KINDS)[number];
@@ -67,8 +68,35 @@ function assertNoSecrets(text: string): void {
   }
 }
 
+export interface TrackerRef {
+  /** The tracker's key, verbatim, e.g. `Req-004`. */
+  key: string;
+  /** The item's https URL: the durable link. */
+  url: string;
+}
+
 export interface IssueBodyInput {
   sections: Record<string, SectionValue>;
+  /** Emitted as a Tracker refs section only when present; primary key first. */
+  trackerRefs?: TrackerRef[];
+}
+
+function renderTrackerRefs(refs: TrackerRef[]): string {
+  const bad = refs.filter(
+    (ref) =>
+      typeof ref?.key !== "string" ||
+      ref.key.length > MAX_TICKET_LENGTH ||
+      !TICKET_SHAPES.none.test(ref.key) ||
+      typeof ref.url !== "string" ||
+      !/^https:\/\/[^\s<>()[\]]+$/.test(ref.url),
+  );
+  if (bad.length > 0) {
+    throw new CutwaterError(
+      "VALIDATION",
+      "Each tracker ref needs a verbatim key such as Req-004 and an https URL without spaces",
+    );
+  }
+  return refs.map((ref) => `- ${ref.key}: ${ref.url}`).join("\n");
 }
 
 export function renderIssueBody(kind: IssueKind, input: IssueBodyInput): string {
@@ -96,6 +124,9 @@ export function renderIssueBody(kind: IssueKind, input: IssueBodyInput): string 
       isEmpty(value) ? "_None._" : renderValue(section.heading, value as SectionValue),
       "",
     );
+  }
+  if (input.trackerRefs && input.trackerRefs.length > 0) {
+    out.push("## Tracker refs", "", renderTrackerRefs(input.trackerRefs), "");
   }
   const body = `${out.join("\n").trimEnd()}\n`;
   assertNoSecrets(body);

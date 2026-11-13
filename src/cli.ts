@@ -23,6 +23,7 @@ import {
   renderIssueBody,
   renderPrBody,
   type IssueKind,
+  type TrackerRef,
 } from "./lib/body.ts";
 import { branchName } from "./lib/branch.ts";
 import { lintCommit } from "./lib/commitlint.ts";
@@ -537,6 +538,7 @@ function cmdBody(env: Env, sub: string | undefined): number {
       : issueKindFor(type);
     body = renderIssueBody(kind, {
       sections: (data.sections ?? data) as Record<string, string | string[]>,
+      trackerRefs: data.sections ? (data.trackerRefs as TrackerRef[] | undefined) : undefined,
     });
   } else if (sub === "pr") {
     body = renderPrBody(data as unknown as Parameters<typeof renderPrBody>[0]);

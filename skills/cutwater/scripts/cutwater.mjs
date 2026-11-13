@@ -1601,130 +1601,6 @@ function scanSecrets(text) {
   return findings;
 }
 
-// src/lib/body.ts
-var ISSUE_KINDS = ["feature", "bug", "chore", "docs"];
-function issueKindFor(type) {
-  if (type === "feat") return "feature";
-  if (type === "fix") return "bug";
-  if (type === "docs") return "docs";
-  return "chore";
-}
-function skeletonSections(kind) {
-  const text = readAsset(`issue-bodies/${kind}.md`).replace(/\r\n?/g, "\n");
-  const sections = [];
-  const lines = text.split("\n");
-  lines.forEach((line, index) => {
-    const heading = /^## (.+)$/.exec(line)?.[1];
-    if (heading) sections.push({ heading, required: /<!-- required/.test(lines[index + 1] ?? "") });
-  });
-  return sections;
-}
-function renderValue(heading, value) {
-  if (typeof value === "string") return value.trim();
-  const checkbox = /criteria|checklist/i.test(heading);
-  return value.map((item) => item.trim()).filter((item) => item !== "").map((item) => {
-    if (/^- \[[ xX]\] /.test(item)) return item;
-    return checkbox ? `- [ ] ${item}` : `- ${item}`;
-  }).join("\n");
-}
-function isEmpty(value) {
-  if (value === void 0) return true;
-  if (typeof value === "string") return value.trim() === "";
-  return value.every((item) => item.trim() === "");
-}
-function assertNoSecrets(text) {
-  const findings = scanSecrets(text);
-  if (findings.length > 0) {
-    throw new CutwaterError(
-      "SECRET",
-      `Refusing to produce a body that looks like it contains credentials (${findings.map((f) => `${f.rule} on line ${f.line}`).join(", ")})`,
-      { findings }
-    );
-  }
-}
-function renderIssueBody(kind, input) {
-  const sections = skeletonSections(kind);
-  const known = new Set(sections.map((section) => section.heading));
-  const unknown = Object.keys(input.sections ?? {}).filter((key) => !known.has(key));
-  if (unknown.length > 0) {
-    throw new CutwaterError(
-      "VALIDATION",
-      `Unknown sections for a ${kind} issue: ${unknown.join(", ")}. Use: ${[...known].join(", ")}`
-    );
-  }
-  const missing = sections.filter((section) => section.required && isEmpty(input.sections[section.heading])).map((s) => s.heading);
-  if (missing.length > 0) {
-    throw new CutwaterError("VALIDATION", `Fill the required sections: ${missing.join(", ")}`);
-  }
-  const out = [];
-  for (const section of sections) {
-    const value = input.sections[section.heading];
-    out.push(
-      `## ${section.heading}`,
-      "",
-      isEmpty(value) ? "_None._" : renderValue(section.heading, value),
-      ""
-    );
-  }
-  const body = `${out.join("\n").trimEnd()}
-`;
-  assertNoSecrets(body);
-  return body;
-}
-var PR_CHECKLIST = [
-  "Linked to its issue (or the no-issue reason is stated above)",
-  "Commits follow Conventional Commits and reference the issue",
-  "Checks were run and their results are recorded above",
-  "No secrets, tokens or personal data are included",
-  "Ready for the maintainer to review and merge; the agent does not merge"
-];
-function renderPrBody(input) {
-  const problems = [];
-  if (!input.summary || input.summary.trim() === "") problems.push("summary is required");
-  if (input.issue === null || input.issue === void 0) {
-    if (!input.noIssueReason || input.noIssueReason.trim() === "") {
-      problems.push(
-        "issue is required; for a user-declared trivial edit set issue to null and give noIssueReason"
-      );
-    }
-  } else if (!Number.isInteger(input.issue) || input.issue <= 0)
-    problems.push("issue must be a positive issue number");
-  if (!Array.isArray(input.changes) || input.changes.length === 0)
-    problems.push("list at least one change");
-  if (!Array.isArray(input.testing)) problems.push("testing must be a list of {command, result}");
-  if (!Array.isArray(input.notVerified) || input.notVerified.length === 0) {
-    problems.push(
-      'notVerified must list what was not checked, or say "Nothing left unverified" explicitly'
-    );
-  }
-  if (problems.length > 0)
-    throw new CutwaterError("VALIDATION", `PR body input is invalid: ${problems.join("; ")}`);
-  const lines = ["## Summary", "", input.summary.trim(), ""];
-  if (input.issue) lines.push(`Closes #${input.issue}`, "");
-  else
-    lines.push(
-      `No issue: trivial edit declared by the user (${(input.noIssueReason ?? "").trim()}).`,
-      ""
-    );
-  if (input.related && input.related.length > 0)
-    lines.push(`Related to ${input.related.map((n) => `#${n}`).join(", ")}`, "");
-  lines.push("## Changes", "", ...input.changes.map((change) => `- ${change.trim()}`), "");
-  lines.push("## Testing evidence", "");
-  if (input.testing.length === 0) lines.push("_No commands were run; see Not verified._");
-  for (const evidence of input.testing)
-    lines.push(`- \`${evidence.command.trim()}\`: ${evidence.result.trim()}`);
-  lines.push("");
-  if (input.screenshots && input.screenshots.length > 0) {
-    lines.push("## Screenshots", "", ...input.screenshots.map((shot) => shot.trim()), "");
-  }
-  lines.push("## Not verified", "", ...input.notVerified.map((item) => `- ${item.trim()}`), "");
-  lines.push("## Checklist", "", ...PR_CHECKLIST.map((item) => `- [x] ${item}`));
-  const body = `${lines.join("\n")}
-`;
-  assertNoSecrets(body);
-  return body;
-}
-
 // src/lib/commitlint.ts
 var COMMIT_TYPES = [
   "feat",
@@ -2050,6 +1926,145 @@ function lintTitle(title, opts = {}) {
     );
   result.valid = errors.length === 0;
   return result;
+}
+
+// src/lib/body.ts
+var ISSUE_KINDS = ["feature", "bug", "chore", "docs"];
+function issueKindFor(type) {
+  if (type === "feat") return "feature";
+  if (type === "fix") return "bug";
+  if (type === "docs") return "docs";
+  return "chore";
+}
+function skeletonSections(kind) {
+  const text = readAsset(`issue-bodies/${kind}.md`).replace(/\r\n?/g, "\n");
+  const sections = [];
+  const lines = text.split("\n");
+  lines.forEach((line, index) => {
+    const heading = /^## (.+)$/.exec(line)?.[1];
+    if (heading) sections.push({ heading, required: /<!-- required/.test(lines[index + 1] ?? "") });
+  });
+  return sections;
+}
+function renderValue(heading, value) {
+  if (typeof value === "string") return value.trim();
+  const checkbox = /criteria|checklist/i.test(heading);
+  return value.map((item) => item.trim()).filter((item) => item !== "").map((item) => {
+    if (/^- \[[ xX]\] /.test(item)) return item;
+    return checkbox ? `- [ ] ${item}` : `- ${item}`;
+  }).join("\n");
+}
+function isEmpty(value) {
+  if (value === void 0) return true;
+  if (typeof value === "string") return value.trim() === "";
+  return value.every((item) => item.trim() === "");
+}
+function assertNoSecrets(text) {
+  const findings = scanSecrets(text);
+  if (findings.length > 0) {
+    throw new CutwaterError(
+      "SECRET",
+      `Refusing to produce a body that looks like it contains credentials (${findings.map((f) => `${f.rule} on line ${f.line}`).join(", ")})`,
+      { findings }
+    );
+  }
+}
+function renderTrackerRefs(refs) {
+  const bad = refs.filter(
+    (ref) => typeof ref?.key !== "string" || ref.key.length > MAX_TICKET_LENGTH || !TICKET_SHAPES.none.test(ref.key) || typeof ref.url !== "string" || !/^https:\/\/[^\s<>()[\]]+$/.test(ref.url)
+  );
+  if (bad.length > 0) {
+    throw new CutwaterError(
+      "VALIDATION",
+      "Each tracker ref needs a verbatim key such as Req-004 and an https URL without spaces"
+    );
+  }
+  return refs.map((ref) => `- ${ref.key}: ${ref.url}`).join("\n");
+}
+function renderIssueBody(kind, input) {
+  const sections = skeletonSections(kind);
+  const known = new Set(sections.map((section) => section.heading));
+  const unknown = Object.keys(input.sections ?? {}).filter((key) => !known.has(key));
+  if (unknown.length > 0) {
+    throw new CutwaterError(
+      "VALIDATION",
+      `Unknown sections for a ${kind} issue: ${unknown.join(", ")}. Use: ${[...known].join(", ")}`
+    );
+  }
+  const missing = sections.filter((section) => section.required && isEmpty(input.sections[section.heading])).map((s) => s.heading);
+  if (missing.length > 0) {
+    throw new CutwaterError("VALIDATION", `Fill the required sections: ${missing.join(", ")}`);
+  }
+  const out = [];
+  for (const section of sections) {
+    const value = input.sections[section.heading];
+    out.push(
+      `## ${section.heading}`,
+      "",
+      isEmpty(value) ? "_None._" : renderValue(section.heading, value),
+      ""
+    );
+  }
+  if (input.trackerRefs && input.trackerRefs.length > 0) {
+    out.push("## Tracker refs", "", renderTrackerRefs(input.trackerRefs), "");
+  }
+  const body = `${out.join("\n").trimEnd()}
+`;
+  assertNoSecrets(body);
+  return body;
+}
+var PR_CHECKLIST = [
+  "Linked to its issue (or the no-issue reason is stated above)",
+  "Commits follow Conventional Commits and reference the issue",
+  "Checks were run and their results are recorded above",
+  "No secrets, tokens or personal data are included",
+  "Ready for the maintainer to review and merge; the agent does not merge"
+];
+function renderPrBody(input) {
+  const problems = [];
+  if (!input.summary || input.summary.trim() === "") problems.push("summary is required");
+  if (input.issue === null || input.issue === void 0) {
+    if (!input.noIssueReason || input.noIssueReason.trim() === "") {
+      problems.push(
+        "issue is required; for a user-declared trivial edit set issue to null and give noIssueReason"
+      );
+    }
+  } else if (!Number.isInteger(input.issue) || input.issue <= 0)
+    problems.push("issue must be a positive issue number");
+  if (!Array.isArray(input.changes) || input.changes.length === 0)
+    problems.push("list at least one change");
+  if (!Array.isArray(input.testing)) problems.push("testing must be a list of {command, result}");
+  if (!Array.isArray(input.notVerified) || input.notVerified.length === 0) {
+    problems.push(
+      'notVerified must list what was not checked, or say "Nothing left unverified" explicitly'
+    );
+  }
+  if (problems.length > 0)
+    throw new CutwaterError("VALIDATION", `PR body input is invalid: ${problems.join("; ")}`);
+  const lines = ["## Summary", "", input.summary.trim(), ""];
+  if (input.issue) lines.push(`Closes #${input.issue}`, "");
+  else
+    lines.push(
+      `No issue: trivial edit declared by the user (${(input.noIssueReason ?? "").trim()}).`,
+      ""
+    );
+  if (input.related && input.related.length > 0)
+    lines.push(`Related to ${input.related.map((n) => `#${n}`).join(", ")}`, "");
+  lines.push("## Changes", "", ...input.changes.map((change) => `- ${change.trim()}`), "");
+  lines.push("## Testing evidence", "");
+  if (input.testing.length === 0) lines.push("_No commands were run; see Not verified._");
+  for (const evidence of input.testing)
+    lines.push(`- \`${evidence.command.trim()}\`: ${evidence.result.trim()}`);
+  lines.push("");
+  if (input.screenshots && input.screenshots.length > 0) {
+    lines.push("## Screenshots", "", ...input.screenshots.map((shot) => shot.trim()), "");
+  }
+  lines.push("## Not verified", "", ...input.notVerified.map((item) => `- ${item.trim()}`), "");
+  lines.push("## Checklist", "", ...PR_CHECKLIST.map((item) => `- [x] ${item}`));
+  const body = `${lines.join("\n")}
+`;
+  assertNoSecrets(body);
+  return body;
 }
 
 // src/lib/branch.ts
@@ -3535,7 +3550,8 @@ function cmdBody(env, sub) {
     const type = requireFlag(env.args, "type");
     const kind = ISSUE_KINDS.includes(type) ? type : issueKindFor(type);
     body = renderIssueBody(kind, {
-      sections: data.sections ?? data
+      sections: data.sections ?? data,
+      trackerRefs: data.sections ? data.trackerRefs : void 0
     });
   } else if (sub === "pr") {
     body = renderPrBody(data);
