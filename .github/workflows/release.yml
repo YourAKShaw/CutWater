@@ -61,7 +61,8 @@ jobs:
           tar -C skills -czf "dist/cutwater-${VERSION}.tar.gz" cutwater
           (cd dist && sha256sum * > checksums.txt)
 
-      - name: Create the release
+      - name: Create the draft release
+        # A draft lets the maintainer review the notes and assets before publishing.
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
@@ -72,4 +73,4 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "cutwater ${VERSION}" \
             --notes-file release-notes.md \
-            --verify-tag $prerelease
+            --verify-tag --draft $prerelease

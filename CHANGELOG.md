@@ -4,16 +4,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
-### Security
-
-- Close the third-party content exposure that Snyk reported as W011 (indirect prompt injection risk). A new `cw read issue|pr|run` subcommand is now the only way the skill reads issue, PR, comment, review and CI-log text. It withholds text by authors who are not owners, members or collaborators unless the user agrees (`--include-untrusted`, a new confirmation gate), strips zero-width and bidi control characters, reports hidden HTML comments, scans for injection signals, and fences its output as untrusted data. `gh issue view` and `gh pr view` were removed from the helper's allowlist, and the wiki no longer uses closed-issue titles.
-- Route the remaining issue and PR title lists through the helper: `cw status` cleans and scans titles, and the new `cw read merged` gives the wiki changelog merged PR titles without bodies. The skill no longer tells the agent to run raw `gh issue list` or `gh pr list`.
-
-### Fixed
-
-- The gitmoji regex now uses escapes instead of literal invisible characters.
-
-## [0.1.0] - 2026-11-10
+## [0.1.0] - 2026-11-13
 
 Initial release.
 
@@ -25,6 +16,15 @@ Initial release.
 - `scripts/cutwater.mjs`: a zero-dependency Node.js 18+ helper bundled from TypeScript, with preflight, audit, defaults, plan, apply, labels, ruleset, manifest, branch-name, lint-commit, body, scan-secrets, react, status and wiki-check subcommands, `--json` and `--dry-run`, an allowlisted command runner, repository pinning, retries and documented exit codes.
 - Codex metadata in `agents/openai.yaml`, plus Claude Code plugin and marketplace manifests.
 - Unit and integration tests with a fake GitHub, seven sandbox fixtures, a real-GitHub sandbox reset script, scenario and triggering eval suites, and a package validator.
+
+### Security
+
+- Close the third-party content exposure that Snyk reported as W011 (indirect prompt injection risk). A new `cw read issue|pr|run` subcommand is now the only way the skill reads issue, PR, comment, review and CI-log text. It withholds text by authors who are not owners, members or collaborators unless the user agrees (`--include-untrusted`, a new confirmation gate), strips zero-width and bidi control characters, reports hidden HTML comments, scans for injection signals, and fences its output as untrusted data. `gh issue view` and `gh pr view` were removed from the helper's allowlist, and the wiki no longer uses closed-issue titles.
+- Route the remaining issue and PR title lists through the helper: `cw status` cleans and scans titles, and the new `cw read merged` gives the wiki changelog merged PR titles without bodies. The skill no longer tells the agent to run raw `gh issue list` or `gh pr list`.
+
+### Fixed
+
+- The gitmoji regex now uses escapes instead of literal invisible characters.
 
 [Unreleased]: https://github.com/YourAKShaw/CutWater/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/YourAKShaw/CutWater/releases/tag/v0.1.0
