@@ -1725,72 +1725,6 @@ function renderPrBody(input) {
   return body;
 }
 
-// src/lib/branch.ts
-var BRANCH_TYPES = [
-  "feat",
-  "fix",
-  "docs",
-  "style",
-  "refactor",
-  "perf",
-  "test",
-  "build",
-  "ci",
-  "chore"
-];
-var MAX_BRANCH_LENGTH = 60;
-var MAX_SLUG_WORDS = 5;
-var STOP_WORDS = /* @__PURE__ */ new Set([
-  "a",
-  "an",
-  "the",
-  "to",
-  "for",
-  "of",
-  "and",
-  "or",
-  "in",
-  "on",
-  "with",
-  "when"
-]);
-function slugWords(title) {
-  const ascii = title.normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^\x20-\x7e]/g, " ").toLowerCase();
-  const withoutPrefix = ascii.replace(/^\s*[a-z]+(\([^)]*\))?!?:\s*/, "");
-  const words = withoutPrefix.split(/[^a-z0-9]+/).filter((word) => word !== "");
-  const meaningful = words.filter((word) => !STOP_WORDS.has(word));
-  return (meaningful.length > 0 ? meaningful : words).slice(0, MAX_SLUG_WORDS);
-}
-function branchName(input) {
-  if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(input.login)) {
-    throw new CutwaterError("USAGE", `"${input.login}" is not a valid GitHub login`);
-  }
-  if (!BRANCH_TYPES.includes(input.type)) {
-    throw new CutwaterError("USAGE", `Branch type must be one of: ${BRANCH_TYPES.join(", ")}`);
-  }
-  if (!Number.isInteger(input.issue) || input.issue < 0) {
-    throw new CutwaterError(
-      "USAGE",
-      "The issue number must be a whole number (0 only for repo setup)"
-    );
-  }
-  const prefix = `${input.login}/${input.type}/${input.issue}`;
-  const words = slugWords(input.title);
-  if (words.length === 0) {
-    throw new CutwaterError(
-      "USAGE",
-      "The title has no ASCII letters or digits to build a branch name from"
-    );
-  }
-  const budget = MAX_BRANCH_LENGTH - prefix.length - 1;
-  if (budget < 1)
-    throw new CutwaterError("USAGE", "The login and issue number leave no room for a description");
-  while (words.length > 1 && words.join("-").length > budget) words.pop();
-  let slug = words.join("-");
-  if (slug.length > budget) slug = slug.slice(0, budget).replace(/-+$/, "");
-  return `${prefix}-${slug}`;
-}
-
 // src/lib/commitlint.ts
 var COMMIT_TYPES = [
   "feat",
@@ -1926,6 +1860,269 @@ function lintCommit(raw, opts = {}) {
   }
   result.valid = errors.length === 0;
   return result;
+}
+
+// src/lib/title.ts
+var GITMOJI_BY_TYPE = {
+  feat: ["✨", "🔒️", "🗃️", "🚸"],
+  fix: ["🐛", "🔒️", "🚑️", "🩹"],
+  docs: ["📝", "🏗️", "🔍️"],
+  style: ["🎨"],
+  refactor: ["♻️", "🔥", "🚚"],
+  perf: ["⚡️"],
+  test: ["✅", "🧪", "📊"],
+  build: ["📦️", "⬆️", "⬇️"],
+  ci: ["👷", "💚"],
+  chore: ["🔧", "🔖", "🙈"],
+  revert: ["⏪️"]
+};
+var TRACKERS = ["none", "entalpa", "jira", "linear"];
+var TICKET_SHAPES = {
+  none: /^[A-Za-z][A-Za-z0-9]*-[0-9]+$/,
+  entalpa: /^Req-[0-9]{3,}$/,
+  jira: /^[A-Z][A-Z0-9]*-[1-9][0-9]*$/,
+  linear: /^[A-Z][A-Z0-9]*-[1-9][0-9]*$/
+};
+var MAX_TITLE_LENGTH = 72;
+var MAX_TICKET_LENGTH = 20;
+var PROPER_NOUNS = /* @__PURE__ */ new Set([
+  "GitHub",
+  "GitLab",
+  "Git",
+  "Jira",
+  "Linear",
+  "Entalpa",
+  "Node",
+  "TypeScript",
+  "JavaScript",
+  "Python",
+  "Windows",
+  "macOS",
+  "Linux"
+]);
+var strip = (emoji) => emoji.replace(/\uFE0F/g, "");
+var KNOWN_EMOJI = new Set(Object.values(GITMOJI_BY_TYPE).flat().map(strip));
+var EMOJI_CLUSTER = new RegExp("^(?:\\p{Extended_Pictographic}|\\p{Emoji_Presentation})\\ufe0f?(?:\\u200d(?:\\p{Extended_Pictographic}|\\p{Emoji_Presentation})\\ufe0f?)*", "u");
+var SHORTCODE2 = /^:[a-z0-9_+-]+:/;
+var TICKET = /^\[(?<key>[^\]]*)\] /;
+var HEADER2 = /^(?<type>[A-Za-z]+)(?:\((?<scope>[^()]*)\))?(?<bang>!)?: (?<summary>.*)$/;
+var HIDDEN = (
+  // eslint-disable-next-line no-control-regex
+  /[\u0000-\u001f\u007f-\u009f\u200b\u200c\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/u
+);
+function parseTitle(title) {
+  const parsed = {
+    emoji: null,
+    ticket: null,
+    type: null,
+    scope: null,
+    breaking: false,
+    summary: null
+  };
+  let rest = title;
+  const emoji = EMOJI_CLUSTER.exec(rest);
+  if (emoji) {
+    parsed.emoji = emoji[0];
+    rest = rest.slice(emoji[0].length).replace(/^ /, "");
+  }
+  const ticket = TICKET.exec(rest);
+  if (ticket?.groups) {
+    parsed.ticket = ticket.groups.key ?? "";
+    rest = rest.slice(ticket[0].length);
+  }
+  const header = HEADER2.exec(rest);
+  if (header?.groups) {
+    parsed.type = header.groups.type ?? null;
+    parsed.scope = header.groups.scope ?? null;
+    parsed.breaking = header.groups.bang === "!";
+    parsed.summary = header.groups.summary ?? "";
+  }
+  return parsed;
+}
+function lintTitle(title, opts = {}) {
+  const tracker = opts.tracker ?? "none";
+  const errors = [];
+  const add = (rule, message) => errors.push({ rule, message });
+  const parsed = parseTitle(title);
+  const result = { ...parsed, valid: false, title, errors };
+  if (title.trim() === "") {
+    add("title-empty", "The title is empty.");
+    return result;
+  }
+  if (HIDDEN.test(title)) {
+    add("title-hidden-chars", "Remove control, zero-width or bidi characters from the title.");
+    return result;
+  }
+  if (title !== title.trim() || / {2}/.test(title)) {
+    add("title-whitespace", "Use single spaces and no leading or trailing whitespace.");
+  }
+  if (!parsed.emoji) {
+    if (SHORTCODE2.test(title))
+      add("emoji-shortcode", "Use the Unicode emoji, not a :shortcode: (titles render raw).");
+    else if (/^\[/.test(title))
+      add("ticket-position", "Put the gitmoji first: `✨ [KEY-1] feat(scope): …`.");
+    else add("emoji-missing", "Start the title with one gitmoji, e.g. `✨ feat(scope): …`.");
+  } else {
+    const after = title.slice(parsed.emoji.length);
+    if (EMOJI_CLUSTER.test(after.trimStart())) add("emoji-multiple", "Use exactly one gitmoji.");
+    else if (!after.startsWith(" ")) add("emoji-space", "Put one space after the gitmoji.");
+    if (!KNOWN_EMOJI.has(strip(parsed.emoji)))
+      add("emoji-unknown", "Use a gitmoji from the CONTRIBUTING table.");
+  }
+  if (parsed.ticket !== null) {
+    const key = parsed.ticket;
+    if (/^\s*(n\/?a|tbd|none|-+)\s*$/i.test(key))
+      add("ticket-placeholder", "Drop the placeholder and use the standard form.");
+    else if (key.length > MAX_TICKET_LENGTH)
+      add("ticket-length", `Ticket keys are at most ${MAX_TICKET_LENGTH} characters.`);
+    else if (!TICKET_SHAPES[tracker].test(key))
+      add(
+        "ticket-format",
+        `The ticket does not match the ${tracker === "none" ? "KEY-123" : tracker} key shape; copy it verbatim.`
+      );
+  }
+  const afterPrefix = title.slice((parsed.emoji ?? "").length).trimStart();
+  if (/^\[[^\]]*\]\s*\[/.test(afterPrefix))
+    add("ticket-multiple", "Use exactly one ticket; list the rest under Tracker refs.");
+  if (parsed.summary !== null && /\[[A-Za-z][A-Za-z0-9]*-[0-9]+\]\s*$/.test(parsed.summary))
+    add("ticket-position", "Move the ticket between the gitmoji and the type.");
+  if (parsed.type === null) {
+    if (/^\s*(epic|spike|wip)\b/i.test(afterPrefix.replace(/^\[[^\]]*\]\s*/, "")))
+      add("kind-in-title", "Epic, spike and WIP are labels (`kind: …`), not title words.");
+    if (!errors.some((e) => e.rule.startsWith("ticket-")))
+      add("header-format", "Expected `<gitmoji> <type>(<scope>): <summary>`.");
+    result.valid = false;
+    return result;
+  }
+  const type = parsed.type;
+  if (/^(epic|spike|wip|adr)$/i.test(type)) {
+    add("kind-in-title", "Epic, spike and ADR are labels (`kind: …`), not the type.");
+    return result;
+  }
+  if (type !== type.toLowerCase()) add("type-case", `Type "${type}" must be lower case.`);
+  const lower = type.toLowerCase();
+  if (!COMMIT_TYPES.includes(lower)) {
+    add("type-enum", `Type "${type}" must be one of: ${COMMIT_TYPES.join(", ")}.`);
+  } else {
+    if (parsed.emoji && KNOWN_EMOJI.has(strip(parsed.emoji))) {
+      const allowed = GITMOJI_BY_TYPE[lower].map(strip);
+      if (!allowed.includes(strip(parsed.emoji)))
+        add(
+          "emoji-type-mismatch",
+          `For ${lower}, use one of: ${GITMOJI_BY_TYPE[lower].join(" ")}.`
+        );
+    }
+    if (opts.labelType && opts.labelType !== lower)
+      add(
+        "type-label-mismatch",
+        `The title says ${lower} but the label is type: ${opts.labelType}.`
+      );
+  }
+  if (parsed.scope === null) add("scope-missing", "Add a scope: `type(scope): …`.");
+  else if (parsed.scope === "<scope>" || parsed.scope.trim() === "")
+    add("scope-placeholder", "Replace `<scope>` with the module or area, e.g. `fix(exec): …`.");
+  else if (!/^[a-z0-9][a-z0-9-]*$/.test(parsed.scope))
+    add("scope-case", `Scope "${parsed.scope}" must be lower-case kebab-case.`);
+  const summary = parsed.summary ?? "";
+  if (summary.trim() === "") add("summary-empty", "The summary is empty.");
+  else {
+    const first = summary.split(/\s/)[0] ?? "";
+    if (/^[A-Z]/.test(first) && !PROPER_NOUNS.has(first) && first !== first.toUpperCase())
+      add("summary-case", "Start the summary with a lower-case imperative verb.");
+    if (/\.$/.test(summary)) add("summary-full-stop", "Do not end the title with a period.");
+    if (/(^|\s)#\d+\b/.test(summary)) add("summary-issue-number", "Drop the issue number.");
+    if (/\[(wip|draft)\]|\bepic:/i.test(summary))
+      add("kind-in-title", "WIP, draft and epic are labels, not title words.");
+  }
+  const core = afterPrefix.replace(TICKET, "");
+  const length = [...core].length;
+  if (length > MAX_TITLE_LENGTH)
+    add(
+      "title-length",
+      `\`type(scope): summary\` is ${length} characters; the limit is ${MAX_TITLE_LENGTH}.`
+    );
+  result.valid = errors.length === 0;
+  return result;
+}
+
+// src/lib/branch.ts
+var BRANCH_TYPES = [
+  "feat",
+  "fix",
+  "docs",
+  "style",
+  "refactor",
+  "perf",
+  "test",
+  "build",
+  "ci",
+  "chore"
+];
+var MAX_BRANCH_LENGTH = 60;
+var MAX_SLUG_WORDS = 5;
+var STOP_WORDS = /* @__PURE__ */ new Set([
+  "a",
+  "an",
+  "the",
+  "to",
+  "for",
+  "of",
+  "and",
+  "or",
+  "in",
+  "on",
+  "with",
+  "when"
+]);
+function slugWords(title) {
+  const ascii = title.normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^\x20-\x7e]/g, " ").toLowerCase();
+  const withoutPrefix = ascii.replace(/^\s*\[[^\]]*\]\s*/, "").replace(/^\s*[a-z]+(\([^)]*\))?!?:\s*/, "");
+  const words = withoutPrefix.split(/[^a-z0-9]+/).filter((word) => word !== "");
+  const meaningful = words.filter((word) => !STOP_WORDS.has(word));
+  return (meaningful.length > 0 ? meaningful : words).slice(0, MAX_SLUG_WORDS);
+}
+function branchName(input) {
+  if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(input.login)) {
+    throw new CutwaterError("USAGE", `"${input.login}" is not a valid GitHub login`);
+  }
+  const titleType = parseTitle(input.title).type?.toLowerCase() ?? null;
+  const type = input.type ?? titleType;
+  if (!type) {
+    throw new CutwaterError(
+      "USAGE",
+      "Pass --type, or a title in the convention form `✨ feat(scope): summary`"
+    );
+  }
+  if (input.type && titleType && input.type !== titleType) {
+    throw new CutwaterError(
+      "USAGE",
+      `--type ${input.type} disagrees with the title's type ${titleType}`
+    );
+  }
+  if (!BRANCH_TYPES.includes(type)) {
+    throw new CutwaterError("USAGE", `Branch type must be one of: ${BRANCH_TYPES.join(", ")}`);
+  }
+  if (!Number.isInteger(input.issue) || input.issue < 0) {
+    throw new CutwaterError(
+      "USAGE",
+      "The issue number must be a whole number (0 only for repo setup)"
+    );
+  }
+  const prefix = `${input.login}/${type}/${input.issue}`;
+  const words = slugWords(input.title);
+  if (words.length === 0) {
+    throw new CutwaterError(
+      "USAGE",
+      "The title has no ASCII letters or digits to build a branch name from"
+    );
+  }
+  const budget = MAX_BRANCH_LENGTH - prefix.length - 1;
+  if (budget < 1)
+    throw new CutwaterError("USAGE", "The login and issue number leave no room for a description");
+  while (words.length > 1 && words.join("-").length > budget) words.pop();
+  let slug = words.join("-");
+  if (slug.length > budget) slug = slug.slice(0, budget).replace(/-+$/, "");
+  return `${prefix}-${slug}`;
 }
 
 // src/lib/read.ts
@@ -2886,189 +3083,6 @@ async function preflight(ctx, explicitRepo) {
   };
 }
 
-// src/lib/title.ts
-var GITMOJI_BY_TYPE = {
-  feat: ["✨", "🔒️", "🗃️", "🚸"],
-  fix: ["🐛", "🔒️", "🚑️", "🩹"],
-  docs: ["📝", "🏗️", "🔍️"],
-  style: ["🎨"],
-  refactor: ["♻️", "🔥", "🚚"],
-  perf: ["⚡️"],
-  test: ["✅", "🧪", "📊"],
-  build: ["📦️", "⬆️", "⬇️"],
-  ci: ["👷", "💚"],
-  chore: ["🔧", "🔖", "🙈"],
-  revert: ["⏪️"]
-};
-var TRACKERS = ["none", "entalpa", "jira", "linear"];
-var TICKET_SHAPES = {
-  none: /^[A-Za-z][A-Za-z0-9]*-[0-9]+$/,
-  entalpa: /^Req-[0-9]{3,}$/,
-  jira: /^[A-Z][A-Z0-9]*-[1-9][0-9]*$/,
-  linear: /^[A-Z][A-Z0-9]*-[1-9][0-9]*$/
-};
-var MAX_TITLE_LENGTH = 72;
-var MAX_TICKET_LENGTH = 20;
-var PROPER_NOUNS = /* @__PURE__ */ new Set([
-  "GitHub",
-  "GitLab",
-  "Git",
-  "Jira",
-  "Linear",
-  "Entalpa",
-  "Node",
-  "TypeScript",
-  "JavaScript",
-  "Python",
-  "Windows",
-  "macOS",
-  "Linux"
-]);
-var strip = (emoji) => emoji.replace(/\uFE0F/g, "");
-var KNOWN_EMOJI = new Set(Object.values(GITMOJI_BY_TYPE).flat().map(strip));
-var EMOJI_CLUSTER = new RegExp("^(?:\\p{Extended_Pictographic}|\\p{Emoji_Presentation})\\ufe0f?(?:\\u200d(?:\\p{Extended_Pictographic}|\\p{Emoji_Presentation})\\ufe0f?)*", "u");
-var SHORTCODE2 = /^:[a-z0-9_+-]+:/;
-var TICKET = /^\[(?<key>[^\]]*)\] /;
-var HEADER2 = /^(?<type>[A-Za-z]+)(?:\((?<scope>[^()]*)\))?(?<bang>!)?: (?<summary>.*)$/;
-var HIDDEN = (
-  // eslint-disable-next-line no-control-regex
-  /[\u0000-\u001f\u007f-\u009f\u200b\u200c\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/u
-);
-function parseTitle(title) {
-  const parsed = {
-    emoji: null,
-    ticket: null,
-    type: null,
-    scope: null,
-    breaking: false,
-    summary: null
-  };
-  let rest = title;
-  const emoji = EMOJI_CLUSTER.exec(rest);
-  if (emoji) {
-    parsed.emoji = emoji[0];
-    rest = rest.slice(emoji[0].length).replace(/^ /, "");
-  }
-  const ticket = TICKET.exec(rest);
-  if (ticket?.groups) {
-    parsed.ticket = ticket.groups.key ?? "";
-    rest = rest.slice(ticket[0].length);
-  }
-  const header = HEADER2.exec(rest);
-  if (header?.groups) {
-    parsed.type = header.groups.type ?? null;
-    parsed.scope = header.groups.scope ?? null;
-    parsed.breaking = header.groups.bang === "!";
-    parsed.summary = header.groups.summary ?? "";
-  }
-  return parsed;
-}
-function lintTitle(title, opts = {}) {
-  const tracker = opts.tracker ?? "none";
-  const errors = [];
-  const add = (rule, message) => errors.push({ rule, message });
-  const parsed = parseTitle(title);
-  const result = { ...parsed, valid: false, title, errors };
-  if (title.trim() === "") {
-    add("title-empty", "The title is empty.");
-    return result;
-  }
-  if (HIDDEN.test(title)) {
-    add("title-hidden-chars", "Remove control, zero-width or bidi characters from the title.");
-    return result;
-  }
-  if (title !== title.trim() || / {2}/.test(title)) {
-    add("title-whitespace", "Use single spaces and no leading or trailing whitespace.");
-  }
-  if (!parsed.emoji) {
-    if (SHORTCODE2.test(title))
-      add("emoji-shortcode", "Use the Unicode emoji, not a :shortcode: (titles render raw).");
-    else if (/^\[/.test(title))
-      add("ticket-position", "Put the gitmoji first: `✨ [KEY-1] feat(scope): …`.");
-    else add("emoji-missing", "Start the title with one gitmoji, e.g. `✨ feat(scope): …`.");
-  } else {
-    const after = title.slice(parsed.emoji.length);
-    if (EMOJI_CLUSTER.test(after.trimStart())) add("emoji-multiple", "Use exactly one gitmoji.");
-    else if (!after.startsWith(" ")) add("emoji-space", "Put one space after the gitmoji.");
-    if (!KNOWN_EMOJI.has(strip(parsed.emoji)))
-      add("emoji-unknown", "Use a gitmoji from the CONTRIBUTING table.");
-  }
-  if (parsed.ticket !== null) {
-    const key = parsed.ticket;
-    if (/^\s*(n\/?a|tbd|none|-+)\s*$/i.test(key))
-      add("ticket-placeholder", "Drop the placeholder and use the standard form.");
-    else if (key.length > MAX_TICKET_LENGTH)
-      add("ticket-length", `Ticket keys are at most ${MAX_TICKET_LENGTH} characters.`);
-    else if (!TICKET_SHAPES[tracker].test(key))
-      add(
-        "ticket-format",
-        `The ticket does not match the ${tracker === "none" ? "KEY-123" : tracker} key shape; copy it verbatim.`
-      );
-  }
-  const afterPrefix = title.slice((parsed.emoji ?? "").length).trimStart();
-  if (/^\[[^\]]*\]\s*\[/.test(afterPrefix))
-    add("ticket-multiple", "Use exactly one ticket; list the rest under Tracker refs.");
-  if (parsed.summary !== null && /\[[A-Za-z][A-Za-z0-9]*-[0-9]+\]\s*$/.test(parsed.summary))
-    add("ticket-position", "Move the ticket between the gitmoji and the type.");
-  if (parsed.type === null) {
-    if (/^\s*(epic|spike|wip)\b/i.test(afterPrefix.replace(/^\[[^\]]*\]\s*/, "")))
-      add("kind-in-title", "Epic, spike and WIP are labels (`kind: …`), not title words.");
-    if (!errors.some((e) => e.rule.startsWith("ticket-")))
-      add("header-format", "Expected `<gitmoji> <type>(<scope>): <summary>`.");
-    result.valid = false;
-    return result;
-  }
-  const type = parsed.type;
-  if (/^(epic|spike|wip|adr)$/i.test(type)) {
-    add("kind-in-title", "Epic, spike and ADR are labels (`kind: …`), not the type.");
-    return result;
-  }
-  if (type !== type.toLowerCase()) add("type-case", `Type "${type}" must be lower case.`);
-  const lower = type.toLowerCase();
-  if (!COMMIT_TYPES.includes(lower)) {
-    add("type-enum", `Type "${type}" must be one of: ${COMMIT_TYPES.join(", ")}.`);
-  } else {
-    if (parsed.emoji && KNOWN_EMOJI.has(strip(parsed.emoji))) {
-      const allowed = GITMOJI_BY_TYPE[lower].map(strip);
-      if (!allowed.includes(strip(parsed.emoji)))
-        add(
-          "emoji-type-mismatch",
-          `For ${lower}, use one of: ${GITMOJI_BY_TYPE[lower].join(" ")}.`
-        );
-    }
-    if (opts.labelType && opts.labelType !== lower)
-      add(
-        "type-label-mismatch",
-        `The title says ${lower} but the label is type: ${opts.labelType}.`
-      );
-  }
-  if (parsed.scope === null) add("scope-missing", "Add a scope: `type(scope): …`.");
-  else if (parsed.scope === "<scope>" || parsed.scope.trim() === "")
-    add("scope-placeholder", "Replace `<scope>` with the module or area, e.g. `fix(exec): …`.");
-  else if (!/^[a-z0-9][a-z0-9-]*$/.test(parsed.scope))
-    add("scope-case", `Scope "${parsed.scope}" must be lower-case kebab-case.`);
-  const summary = parsed.summary ?? "";
-  if (summary.trim() === "") add("summary-empty", "The summary is empty.");
-  else {
-    const first = summary.split(/\s/)[0] ?? "";
-    if (/^[A-Z]/.test(first) && !PROPER_NOUNS.has(first) && first !== first.toUpperCase())
-      add("summary-case", "Start the summary with a lower-case imperative verb.");
-    if (/\.$/.test(summary)) add("summary-full-stop", "Do not end the title with a period.");
-    if (/(^|\s)#\d+\b/.test(summary)) add("summary-issue-number", "Drop the issue number.");
-    if (/\[(wip|draft)\]|\bepic:/i.test(summary))
-      add("kind-in-title", "WIP, draft and epic are labels, not title words.");
-  }
-  const core = afterPrefix.replace(TICKET, "");
-  const length = [...core].length;
-  if (length > MAX_TITLE_LENGTH)
-    add(
-      "title-length",
-      `\`type(scope): summary\` is ${length} characters; the limit is ${MAX_TITLE_LENGTH}.`
-    );
-  result.valid = errors.length === 0;
-  return result;
-}
-
 // src/cli.ts
 var BOOLEANS = /* @__PURE__ */ new Set([
   "include-untrusted",
@@ -3102,7 +3116,8 @@ Task loop (Phases 1-5)
                                     non-collaborator text withheld unless the user says yes
   read run RUN_ID                   tail of failed CI steps, fenced and scanned
   read merged [--limit N]           titles of merged PRs (no bodies), fenced and scanned
-  branch-name --type T --issue N --title TEXT [--login L]
+  branch-name [--type T] --issue N --title TEXT [--login L]
+                                    type defaults to the convention title's type
   lint-commit [MESSAGE | --file FILE | -] [--issue N]
   lint-title [TITLE | --title TEXT | -] [--tracker none|entalpa|jira|linear] [--label "type: T"]
   body issue --type T --data FILE [--out FILE]
@@ -3499,7 +3514,7 @@ async function cmdBranchName(env) {
     throw new CutwaterError("USAGE", "--issue is required (use 0 only for repo setup)");
   const name = branchName({
     login,
-    type: requireFlag(env.args, "type"),
+    type: stringFlag(env.args, "type"),
     issue,
     title: requireFlag(env.args, "title")
   });

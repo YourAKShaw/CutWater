@@ -65,3 +65,34 @@ test("rejects bad types, logins and titles", () => {
     CutwaterError,
   );
 });
+
+test("derives the type from a convention title and drops emoji, scope and ticket", () => {
+  assert.equal(
+    branchName({
+      login: "ana",
+      issue: 4,
+      title: "📝 docs(contributing): define the title convention",
+    }),
+    "ana/docs/4-define-title-convention",
+  );
+  assert.equal(
+    branchName({
+      login: "ana",
+      issue: 9,
+      title: "✨ [Req-004] feat(install): back up hook config",
+    }),
+    "ana/feat/9-back-up-hook-config",
+  );
+  assert.equal(
+    branchName({ login: "ana", type: "fix", issue: 3, title: "🐛 [PROV-1] fix(api)!: drop nulls" }),
+    "ana/fix/3-drop-nulls",
+  );
+});
+
+test("rejects a missing or contradicting type", () => {
+  assert.throws(() => branchName({ login: "ana", issue: 1, title: "add a thing" }), CutwaterError);
+  assert.throws(
+    () => branchName({ login: "ana", type: "fix", issue: 1, title: "✨ feat(api): add x" }),
+    CutwaterError,
+  );
+});

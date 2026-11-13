@@ -86,7 +86,8 @@ Task loop (Phases 1-5)
                                     non-collaborator text withheld unless the user says yes
   read run RUN_ID                   tail of failed CI steps, fenced and scanned
   read merged [--limit N]           titles of merged PRs (no bodies), fenced and scanned
-  branch-name --type T --issue N --title TEXT [--login L]
+  branch-name [--type T] --issue N --title TEXT [--login L]
+                                    type defaults to the convention title's type
   lint-commit [MESSAGE | --file FILE | -] [--issue N]
   lint-title [TITLE | --title TEXT | -] [--tracker none|entalpa|jira|linear] [--label "type: T"]
   body issue --type T --data FILE [--out FILE]
@@ -518,7 +519,7 @@ async function cmdBranchName(env: Env): Promise<number> {
     throw new CutwaterError("USAGE", "--issue is required (use 0 only for repo setup)");
   const name = branchName({
     login,
-    type: requireFlag(env.args, "type"),
+    type: stringFlag(env.args, "type"),
     issue,
     title: requireFlag(env.args, "title"),
   });

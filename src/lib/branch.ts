@@ -1,4 +1,5 @@
 import { CutwaterError } from "./errors.ts";
+import { parseTitle } from "./title.ts";
 
 export const BRANCH_TYPES = [
   "feat",
@@ -37,7 +38,8 @@ const STOP_WORDS = new Set([
 
 export interface BranchInput {
   login: string;
-  type: string;
+  /** Omit to derive it from a convention title such as `✨ feat(api): …`. */
+  type?: string | null;
   issue: number;
   title: string;
 }
@@ -49,8 +51,11 @@ export function slugWords(title: string): string[] {
     .replace(/[̀-ͯ]/g, "")
     .replace(/[^\x20-\x7e]/g, " ")
     .toLowerCase();
-  // Drop a leading conventional prefix such as "✨ feat:" or "fix(api):".
-  const withoutPrefix = ascii.replace(/^\s*[a-z]+(\([^)]*\))?!?:\s*/, "");
+  // Drop a leading tracker key and conventional prefix such as
+  // "✨ [Req-004] feat(api):" or "fix(api):"; neither belongs in a branch.
+  const withoutPrefix = ascii
+    .replace(/^\s*\[[^\]]*\]\s*/, "")
+    .replace(/^\s*[a-z]+(\([^)]*\))?!?:\s*/, "");
   const words = withoutPrefix.split(/[^a-z0-9]+/).filter((word) => word !== "");
   const meaningful = words.filter((word) => !STOP_WORDS.has(word));
   return (meaningful.length > 0 ? meaningful : words).slice(0, MAX_SLUG_WORDS);
@@ -61,7 +66,21 @@ export function branchName(input: BranchInput): string {
   if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(input.login)) {
     throw new CutwaterError("USAGE", `"${input.login}" is not a valid GitHub login`);
   }
-  if (!(BRANCH_TYPES as readonly string[]).includes(input.type)) {
+  const titleType = parseTitle(input.title).type?.toLowerCase() ?? null;
+  const type = input.type ?? titleType;
+  if (!type) {
+    throw new CutwaterError(
+      "USAGE",
+      "Pass --type, or a title in the convention form `✨ feat(scope): summary`",
+    );
+  }
+  if (input.type && titleType && input.type !== titleType) {
+    throw new CutwaterError(
+      "USAGE",
+      `--type ${input.type} disagrees with the title's type ${titleType}`,
+    );
+  }
+  if (!(BRANCH_TYPES as readonly string[]).includes(type)) {
     throw new CutwaterError("USAGE", `Branch type must be one of: ${BRANCH_TYPES.join(", ")}`);
   }
   if (!Number.isInteger(input.issue) || input.issue < 0) {
@@ -70,7 +89,7 @@ export function branchName(input: BranchInput): string {
       "The issue number must be a whole number (0 only for repo setup)",
     );
   }
-  const prefix = `${input.login}/${input.type}/${input.issue}`;
+  const prefix = `${input.login}/${type}/${input.issue}`;
   const words = slugWords(input.title);
   if (words.length === 0) {
     throw new CutwaterError(
