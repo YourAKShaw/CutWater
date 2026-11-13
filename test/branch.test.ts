@@ -89,6 +89,13 @@ test("derives the type from a convention title and drops emoji, scope and ticket
   );
 });
 
+test("keeps an explicit type with a free-form title whose prefix is not a type", () => {
+  assert.equal(
+    branchName({ login: "ana", type: "fix", issue: 2, title: "Bug: handle missing token" }),
+    "ana/fix/2-handle-missing-token",
+  );
+});
+
 test("rejects a missing or contradicting type", () => {
   assert.throws(() => branchName({ login: "ana", issue: 1, title: "add a thing" }), CutwaterError);
   assert.throws(

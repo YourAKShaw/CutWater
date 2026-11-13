@@ -2107,7 +2107,8 @@ function branchName(input) {
   if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(input.login)) {
     throw new CutwaterError("USAGE", `"${input.login}" is not a valid GitHub login`);
   }
-  const titleType = parseTitle(input.title).type?.toLowerCase() ?? null;
+  const parsedType = parseTitle(input.title).type?.toLowerCase() ?? null;
+  const titleType = parsedType && BRANCH_TYPES.includes(parsedType) ? parsedType : null;
   const type = input.type ?? titleType;
   if (!type) {
     throw new CutwaterError(
