@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * The setup manifest at .github/cutwater.json. It records only what was
  * applied and verified (invariant I8), and per-file hashes let upgrades tell

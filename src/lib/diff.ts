@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * Unified diff between two texts, used to show the user exactly what an
  * overwrite would change before they say yes (invariant I3).

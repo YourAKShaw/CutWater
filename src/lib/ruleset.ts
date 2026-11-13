@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * Default-branch ruleset (opt-in, gated). Looked up by name before any
  * write; an existing ruleset is updated with PUT, never duplicated.

@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * Interview answers: defaults, validation and the template variables
  * derived from them. The interview itself is run by the agent in one

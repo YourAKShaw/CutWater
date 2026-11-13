@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 import { execFileSync } from "node:child_process";
 import { spawnRunner } from "../src/lib/exec.ts";
 import { fakeGithubRunner, newRepo, newState, type FakeState } from "./fake-gh/fake-github.mjs";

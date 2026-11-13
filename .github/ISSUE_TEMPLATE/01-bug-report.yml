@@ -1,3 +1,6 @@
+# Copyright 2026 Ayush Kumar Shaw
+# SPDX-License-Identifier: Apache-2.0
+
 name: 🐛 Bug report
 description: The skill guided an agent wrongly, the helper failed, or a template is broken.
 title: "🐛 fix(<scope>): "

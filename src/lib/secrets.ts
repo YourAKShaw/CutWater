@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * Scans text that is about to be posted to GitHub (issue, PR, comment and
  * wiki bodies) for credentials. Any finding blocks the post. This is a

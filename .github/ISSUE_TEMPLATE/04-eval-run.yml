@@ -1,3 +1,6 @@
+# Copyright 2026 Ayush Kumar Shaw
+# SPDX-License-Identifier: Apache-2.0
+
 name: 📊 Eval run
 description: Report results from running the scenario or triggering evals.
 title: "📊 test(evals): record eval run "

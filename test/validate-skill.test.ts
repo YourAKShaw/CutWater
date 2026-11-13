@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 import assert from "node:assert/strict";
 import { cpSync } from "node:fs";
 import { join } from "node:path";

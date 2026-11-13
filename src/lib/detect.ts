@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 /** Stack and project-metadata detection for interview defaults. */
 import { basename, join } from "node:path";
 import { isFile, readText } from "./fsutil.ts";

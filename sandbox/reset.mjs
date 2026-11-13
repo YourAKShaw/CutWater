@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 // Recreate the sandbox repositories on a THROWAWAY GitHub account or org
 // from the fixtures in sandbox/fixtures/. Maintainer tooling; never run by
 // the skill.

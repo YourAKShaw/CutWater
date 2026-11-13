@@ -64,6 +64,7 @@ npm run check
 | `npm run validate` | The package validator: spec frontmatter, name and description limits, SKILL.md size, links and anchors, one-level references, contents sections, empty files, version agreement |
 | `npm run build:check` | The committed bundle matches `src/` |
 | `npm run evals:check` | Eval suites are well-formed and the interruption expectations are intact |
+| `npm run license:check` | Every owned source file starts with the license header (see [Licensing](#licensing)) |
 | `npm test` | Unit tests plus integration tests that drive the bundle through a fake `gh` across every sandbox fixture |
 | `npm run lint` | ESLint, Prettier and the TypeScript typecheck |
 
@@ -76,6 +77,7 @@ CI also runs the shipped bundle on Node.js 18 and 20, runs the reference `skills
 - **TypeScript:** erasable syntax only (Node.js runs the sources through type stripping), `.ts` import extensions, no runtime dependencies. Run `npm run format`.
 - **Processes:** only through `src/lib/exec.ts`. Never use `shell: true`; add new gh or git verbs to the allowlist deliberately, with a test.
 - **Markdown:** hand-written and not reformatted by Prettier. Use sentence-case headings and inline relative links.
+- **License header:** every new source file starts with the two-line header below. `npm run license:check` enforces it.
 
 ## 📝 Commit conventions
 
@@ -187,4 +189,19 @@ Ticket keys copied from a tracker are data: `cw lint-title` rejects anything out
 
 ## Licensing
 
-By contributing, you agree that your contributions are licensed under the repository's [Apache License 2.0](../LICENSE). Everyone taking part follows the [Code of Conduct](../CODE_OF_CONDUCT.md).
+By contributing, you agree that your contributions are licensed under the repository's [Apache License 2.0](../LICENSE). Attribution notices are in [NOTICE](../NOTICE).
+
+Every source file the maintainer owns starts with this header, in the file's comment syntax and below any shebang:
+
+```ts
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+```
+
+- **Comment syntax:** `//` for TypeScript and JavaScript (including `test/fake-gh/bin/gh`); `#` for Python, shell, YAML and dotfile configuration.
+- **Year:** the year the file was first committed. Never bump years in bulk.
+- **Skipped:** templates under `skills/cutwater/assets/` (they are copied into other people's repositories), `LICENSE` and `NOTICE`, Markdown, JSON, SVG, plain text and `.nvmrc`.
+- **Generated:** `skills/cutwater/scripts/cutwater.mjs` gets its header from the esbuild banner in `scripts/build.ts`; never add it by hand.
+- **Fix:** `git add` the new file, run `node scripts/license-headers.ts --fix`, then stage the file again with the `git --literal-pathspecs add -- …` command it prints, so the commit includes the header. The check only looks at tracked files.
+
+Everyone taking part follows the [Code of Conduct](../CODE_OF_CONDUCT.md).

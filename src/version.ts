@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 /** Skill version; must match SKILL.md metadata.version, package.json and plugin.json. */
 export const VERSION = "0.1.0";
 

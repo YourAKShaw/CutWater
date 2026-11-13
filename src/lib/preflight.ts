@@ -1,3 +1,6 @@
+// Copyright 2026 Ayush Kumar Shaw
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * Preflight: everything cutwater must know before any other step.
  * Read-only. Identity always comes from `gh api user` (invariant I4).
