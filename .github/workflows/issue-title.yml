@@ -47,8 +47,9 @@ jobs:
           gh label create needs-triage --color ededed \
             --description "Needs a maintainer to triage (e.g. fix the issue title)" >/dev/null 2>&1 || true
           gh issue edit "$ISSUE" --add-label needs-triage
+          # --paginate applies --jq per page, so count matching ids across pages.
           already=$(gh api "repos/$GH_REPO/issues/$ISSUE/comments" --paginate \
-            --jq "[.[] | select(.user.login == \"github-actions[bot]\" and (.body | contains(\"$marker\")))] | length")
+            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | contains(\"$marker\"))) | .id" | wc -l | tr -d ' ')
           if [ "$already" = "0" ]; then
             node -e '
               const r = JSON.parse(require("fs").readFileSync("result.json", "utf8"));
