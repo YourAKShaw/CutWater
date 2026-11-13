@@ -45,6 +45,7 @@ test("rejects each invalid row with its rule", () => {
     ["✨ feature(exec): pin calls", "type-enum"],
     ["🐛 fix(<scope>): crash on start", "scope-placeholder"],
     ["🐛 fix(api): crash on start #12", "summary-issue-number"],
+    ["🐛 fix(api): handle nulls (#12)", "summary-issue-number"],
     ["🐛 fix(api): [WIP] crash on start", "kind-in-title"],
     ["✨  feat(api): two spaces", "title-whitespace"],
     ["✨feat(api): no space", "emoji-space"],
