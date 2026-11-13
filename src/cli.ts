@@ -49,6 +49,7 @@ import {
 import { ensureRuleset, findRuleset } from "./lib/ruleset.ts";
 import { formatMerged, formatRead, readMerged, readRunLog, readThread } from "./lib/read.ts";
 import { scanSecrets } from "./lib/secrets.ts";
+import { lintTitle, TRACKERS, type Tracker } from "./lib/title.ts";
 import { writeTextAtomic } from "./lib/fsutil.ts";
 import { MANIFEST_PATH, VERSION } from "./version.ts";
 
@@ -87,6 +88,7 @@ Task loop (Phases 1-5)
   read merged [--limit N]           titles of merged PRs (no bodies), fenced and scanned
   branch-name --type T --issue N --title TEXT [--login L]
   lint-commit [MESSAGE | --file FILE | -] [--issue N]
+  lint-title [TITLE | --title TEXT | -] [--tracker none|entalpa|jira|linear] [--label "type: T"]
   body issue --type T --data FILE [--out FILE]
   body pr --data FILE [--out FILE]
   scan-secrets [FILE | -]
@@ -482,6 +484,29 @@ function cmdLintCommit(env: Env, rest: string[]): number {
   return result.valid ? EXIT.OK : EXIT.ERROR;
 }
 
+function cmdLintTitle(env: Env, rest: string[]): number {
+  const flag = stringFlag(env.args, "title");
+  let title: string;
+  if (flag !== null) title = flag;
+  else if (rest[0] === "-" || rest.length === 0) title = readInput("-").replace(/\r?\n$/, "");
+  else title = rest.join(" ");
+  const tracker = stringFlag(env.args, "tracker") ?? "none";
+  if (!(TRACKERS as readonly string[]).includes(tracker))
+    throw new CutwaterError("USAGE", `--tracker must be one of: ${TRACKERS.join(", ")}`);
+  const label = stringFlag(env.args, "label");
+  const result = lintTitle(title, {
+    tracker: tracker as Tracker,
+    labelType: label ? label.replace(/^type:\s*/, "") : null,
+  });
+  print(env.out, result, () =>
+    [
+      result.valid ? "✅ title follows the convention" : "❌ title does not follow the convention",
+      ...result.errors.map((issue) => `  error   ${issue.rule}: ${issue.message}`),
+    ].join("\n"),
+  );
+  return result.valid ? EXIT.OK : EXIT.ERROR;
+}
+
 async function cmdBranchName(env: Env): Promise<number> {
   let login = stringFlag(env.args, "login");
   if (!login) {
@@ -591,6 +616,11 @@ async function run(argv: string[]): Promise<number> {
       return cmdManifest(env, sub);
     case "lint-commit":
       return cmdLintCommit(
+        env,
+        [sub, ...rest].filter((part): part is string => part !== undefined),
+      );
+    case "lint-title":
+      return cmdLintTitle(
         env,
         [sub, ...rest].filter((part): part is string => part !== undefined),
       );
