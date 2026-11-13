@@ -13,6 +13,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Changed
 
+- Relicensed from MIT to the Apache License 2.0, with a `NOTICE` file in the repository and in the skill package ([#29](https://github.com/YourAKShaw/CutWater/issues/29)). Version 0.1.0 stays available under MIT. The MIT default that cutwater offers scaffolded repositories is unchanged.
 - `cw branch-name` takes its type from a convention title when `--type` is omitted, and drops a leading `[ticket]` from the slug.
 - `cw lint-commit` reports a tracker key before the type as `ticket-position`.
 - Issue forms start with a scope placeholder, e.g. `🐛 fix(<scope>): `.

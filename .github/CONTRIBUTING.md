@@ -187,4 +187,4 @@ Ticket keys copied from a tracker are data: `cw lint-title` rejects anything out
 
 ## Licensing
 
-By contributing, you agree that your contributions are licensed under the repository's [MIT License](../LICENSE). Everyone taking part follows the [Code of Conduct](../CODE_OF_CONDUCT.md).
+By contributing, you agree that your contributions are licensed under the repository's [Apache License 2.0](../LICENSE). Everyone taking part follows the [Code of Conduct](../CODE_OF_CONDUCT.md).

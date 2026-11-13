@@ -10,7 +10,7 @@ Every change traced from issue to branch to commits to pull request, and you alw
 [![Agent Skill](https://img.shields.io/badge/Agent-Skill-334155?style=flat-square)](skills/cutwater/SKILL.md)
 [![Helper: Node.js 18+](https://img.shields.io/badge/Helper-Node.js%2018%2B-334155?style=flat-square)](skills/cutwater/scripts/README-scripts.md)
 [![Conventional Commits](https://img.shields.io/badge/Conventional-Commits-334155?style=flat-square)](https://www.conventionalcommits.org/en/v1.0.0/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-2563EB?style=flat-square)](LICENSE)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-2563EB?style=flat-square)](LICENSE)
 
 [![HOL Guard](https://img.shields.io/endpoint?url=https%3A%2F%2Fhol.org%2Fapi%2Fregistry%2Fbadges%2Fplugin%3Fslug%3Dyourakshaw%252Fcutwater%26metric%3Drelease)](https://hol.org/registry/plugins/yourakshaw%2Fcutwater?utm_source=hol_marketplace&utm_medium=plugins_badge&utm_campaign=plugins&utm_content=yourakshaw%2Fcutwater&ref=plugin-author-442d4850)
 
@@ -169,4 +169,4 @@ Real transcripts where an agent broke a rule are the most valuable contribution,
 
 ## License
 
-Distributed under the **MIT License**. See [LICENSE](LICENSE).
+Distributed under the **Apache License 2.0**. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
