@@ -1,3 +1,6 @@
+# Copyright 2026 Ayush Kumar Shaw
+# SPDX-License-Identifier: Apache-2.0
+
 # Markdown is hand-authored; generated and vendored files are not reformatted.
 *.md
 node_modules/

@@ -1,3 +1,6 @@
+# Copyright 2026 Ayush Kumar Shaw
+# SPDX-License-Identifier: Apache-2.0
+
 # Codex UI metadata and invocation policy. Other clients ignore this file.
 # To make cutwater explicit-only in Codex, set allow_implicit_invocation: false.
 interface:
