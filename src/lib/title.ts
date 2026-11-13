@@ -229,7 +229,8 @@ export function lintTitle(title: string, opts: TitleLintOptions = {}): TitleLint
     if (/^[A-Z]/.test(first) && !PROPER_NOUNS.has(first) && first !== first.toUpperCase())
       add("summary-case", "Start the summary with a lower-case imperative verb.");
     if (/\.$/.test(summary)) add("summary-full-stop", "Do not end the title with a period.");
-    if (/(?<![A-Za-z0-9&])#\d+\b/.test(summary)) add("summary-issue-number", "Drop the issue number.");
+    if (/(?<![A-Za-z0-9&])#\d+\b/.test(summary))
+      add("summary-issue-number", "Drop the issue number.");
     if (/\[(wip|draft)\]|\bepic:/i.test(summary))
       add("kind-in-title", "WIP, draft and epic are labels, not title words.");
   }
