@@ -1867,7 +1867,7 @@ function lintTitle(title, opts = {}) {
   const afterPrefix = title.slice((parsed.emoji ?? "").length).trimStart();
   if (/^\[[^\]]*\]\s*\[/.test(afterPrefix))
     add("ticket-multiple", "Use exactly one ticket; list the rest under Tracker refs.");
-  if (parsed.summary !== null && /\[[A-Za-z][A-Za-z0-9]*-[0-9]+\]\s*$/.test(parsed.summary))
+  if (parsed.summary !== null && /\[[A-Za-z][A-Za-z0-9]*-[0-9]+\]/.test(parsed.summary))
     add("ticket-position", "Move the ticket between the gitmoji and the type.");
   if (parsed.type === null) {
     if (/^\s*(epic|spike|wip)\b/i.test(afterPrefix.replace(/^\[[^\]]*\]\s*/, "")))

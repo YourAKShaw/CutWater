@@ -37,6 +37,7 @@ test("rejects each invalid row with its rule", () => {
     ["✨ [Req-004][Req-005] feat(install): back up config", "ticket-multiple"],
     ["[Req-004] ✨ feat(install): back up config", "ticket-position"],
     ["✨ feat(install): back up hook config [Req-004]", "ticket-position"],
+    ["✨ [Req-004] feat(api): handle [REQ-005] retries", "ticket-position"],
     ["✨ [N/A] feat(ci): fix the build", "ticket-placeholder"],
     ["✨ [Req-004] Feat(install): back up config", "type-case"],
     ["🐛 feat(exec): pin calls", "emoji-type-mismatch"],
