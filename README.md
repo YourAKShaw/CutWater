@@ -1,5 +1,3 @@
-[![HOL Guard](https://img.shields.io/endpoint?url=https%3A%2F%2Fhol.org%2Fapi%2Fregistry%2Fbadges%2Fplugin%3Fslug%3Dyourakshaw%252Fcutwater%26metric%3Drelease)](https://hol.org/registry/plugins/yourakshaw%2Fcutwater?utm_source=hol_marketplace&utm_medium=plugins_badge&utm_campaign=plugins&utm_content=yourakshaw%2Fcutwater&ref=plugin-author-442d4850)
-
 <div align="center">
 
 <h1><img src="docs/assets/banner.svg" alt="cutwater" width="100%"></h1>
@@ -13,6 +11,8 @@ Every change traced from issue to branch to commits to pull request, and you alw
 [![Helper: Node.js 18+](https://img.shields.io/badge/Helper-Node.js%2018%2B-334155?style=flat-square)](skills/cutwater/scripts/README-scripts.md)
 [![Conventional Commits](https://img.shields.io/badge/Conventional-Commits-334155?style=flat-square)](https://www.conventionalcommits.org/en/v1.0.0/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-2563EB?style=flat-square)](LICENSE)
+
+[![HOL Guard](https://img.shields.io/endpoint?url=https%3A%2F%2Fhol.org%2Fapi%2Fregistry%2Fbadges%2Fplugin%3Fslug%3Dyourakshaw%252Fcutwater%26metric%3Drelease)](https://hol.org/registry/plugins/yourakshaw%2Fcutwater?utm_source=hol_marketplace&utm_medium=plugins_badge&utm_campaign=plugins&utm_content=yourakshaw%2Fcutwater&ref=plugin-author-442d4850)
 
 [Explore the skill](skills/cutwater/SKILL.md) · [Documentation](docs/README.md) · [Usage guide](docs/SKILL-USAGE.md) · [Contribute](.github/CONTRIBUTING.md) · [Get help](.github/SUPPORT.md) · [Security](SECURITY.md)
 
