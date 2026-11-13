@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright 2026 Ayush Kumar Shaw
+# SPDX-License-Identifier: Apache-2.0
+
 """Check commit messages against the Complete Commit Contract.
 
 Usage:
