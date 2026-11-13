@@ -16,7 +16,8 @@
 CutWater/
 ├── skills/cutwater/              # The shipped Agent Skill (what users install)
 │   ├── SKILL.md                  # Router: hard rules, phase flow, helper usage (≤ 300 lines)
-│   ├── LICENSE                   # MIT, travels with the skill
+│   ├── LICENSE                   # Apache-2.0, travels with the skill
+│   ├── NOTICE                    # Attribution notice (Apache-2.0 §4(d))
 │   ├── agents/openai.yaml        # Codex UI metadata and invocation policy
 │   ├── references/               # Loaded on demand, each linked from SKILL.md, never from each other
 │   ├── assets/                   # Templates, labels, ruleset, manifest schema, client deny rules
