@@ -123,6 +123,13 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     process.exit(1);
   }
   for (const file of report.fixed) console.log(`+ ${file}`);
+  if (report.fixed.length > 0) {
+    // --fix edits the working tree only; the index still holds the old content.
+    const quoted = report.fixed.map((file) => `'${file.replace(/'/g, "'\\''")}'`).join(" ");
+    console.log(
+      `Stage the fixed files so the commit includes the headers:\n  git add -- ${quoted}`,
+    );
+  }
   for (const file of report.missing) console.error(`✖ ${file}: missing copyright or SPDX header`);
   if (report.checked === 0) {
     console.error("✖ no owned source files found; refusing to pass");
