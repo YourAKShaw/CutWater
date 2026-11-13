@@ -1,6 +1,6 @@
 name: 📊 Eval run
 description: Report results from running the scenario or triggering evals.
-title: "📊 test: eval run "
+title: "📊 test(evals): record eval run "
 labels: ["type: test"]
 body:
   - type: markdown

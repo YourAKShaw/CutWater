@@ -1,6 +1,6 @@
 name: 📝 Documentation
 description: Missing, wrong or unclear documentation.
-title: "📝 docs: "
+title: "📝 docs(<scope>): "
 labels: ["type: docs"]
 body:
   - type: input

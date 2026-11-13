@@ -1,6 +1,6 @@
 name: ✨ Improvement
 description: Propose a new rule, phase, template, helper command or stack.
-title: "✨ feat: "
+title: "✨ feat(<scope>): "
 labels: ["type: feat"]
 body:
   - type: textarea
