@@ -96,6 +96,88 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>
 - **Breaking changes:** replace `Breaking: none` with a `BREAKING-CHANGE:` trailer and add `!` to the header. Renaming a helper subcommand or flag, changing an exit code, or changing the manifest schema is breaking.
 - **AI-assisted commits** end with exactly the trailer above. It is this repository's one recorded agent trailer: keep it byte for byte. CI checks it with `.github/scripts/lint-commit.py`.
 
+## 🏷️ Issue titles
+
+Issue titles mirror the commit header, with exactly one Unicode gitmoji **first** (issue lists are for humans; commit headers are for parsers):
+
+```text
+<gitmoji> <type>(<scope>)[!]: <summary>                  # standard (default)
+<gitmoji> [<ticket>] <type>(<scope>)[!]: <summary>       # tracker-linked variant
+```
+
+| Part | Rule |
+| :--- | :--- |
+| `gitmoji` | Exactly one, Unicode (never `:shortcode:`: titles render raw in `gh`, the API and email), first, then one space. From the table below. |
+| `type` | `feat fix docs style refactor perf test build ci chore revert`, lower case. Must equal the issue's `type: <type>` label. |
+| `(scope)` | Required (outsiders filing a form may leave `<scope>`; maintainers set it at triage). Lower-case kebab-case module or area, reused by the branch, PR and commits. |
+| `!` | Only when a published contract breaks (manifest schema, CLI flags, exit codes, SKILL.md behaviour). |
+| `summary` | Imperative, lower-case first word (proper nouns such as `GitHub`, `ADR` excepted), no trailing period, no issue number, no `[WIP]` or `EPIC:` tags. |
+| Length | `<type>(<scope>)[!]: <summary>` is at most 72 characters, so the PR header `type(scope): summary (#NNN)` stays under 80. |
+
+Epics, spikes and ADRs keep the same shape; their kind is a label (`kind: epic`, `kind: spike`), not a title word.
+
+### Gitmoji per type
+
+| Type | Default | Allowed alternatives (when more precise) |
+| :--- | :--- | :--- |
+| feat | ✨ | 🔒️ security hardening · 🗃️ data/schema · 🚸 UX/onboarding |
+| fix | 🐛 | 🔒️ security fix · 🚑️ critical hotfix · 🩹 trivial fix |
+| docs | 📝 | 🏗️ architecture decision (ADR) · 🔍️ spike write-up |
+| style | 🎨 | — |
+| refactor | ♻️ | 🔥 removal · 🚚 move/rename |
+| perf | ⚡️ | — |
+| test | ✅ | 🧪 failing/repro test first · 📊 eval run |
+| build | 📦️ | ⬆️ / ⬇️ dependency bump |
+| ci | 👷 | 💚 fix a red build |
+| chore | 🔧 | 🔖 release/version · 🙈 ignore files |
+| revert | ⏪️ | — |
+
+The type, not the emoji, is authoritative for tooling. `cw lint-title` checks all of this, including the emoji↔type pairing.
+
+### Tracker-linked variant
+
+Use `[<ticket>]` only when the repository is tied to an external tracker and the issue implements one of its items. A repository is either tracker-linked or not; record the choice here. Issues that implement no tracker item use the standard form, never a placeholder such as `[N/A]`.
+
+- The key is copied **verbatim** (`Req-004`, not `REQ-4`), ASCII, no spaces, at most 20 characters, between the gitmoji and the type.
+- **Exactly one** ticket. List secondary keys in the body's *Tracker refs* section; several tickets in a title means the issue should be split.
+- The `[<ticket>] ` prefix (at most 22 characters) does not count toward the 72-character limit.
+
+| Tracker | Key shape | Example |
+| :--- | :--- | :--- |
+| Entalpa | `Req-NNN` (requirement `human_id`, link the requirement, not the story) | `Req-004` |
+| Jira | `<PROJECT>-<n>` | `PROV-142` |
+| Linear | `<TEAM>-<n>` | `ENG-87` |
+| GitHub Projects, Asana, Trello, others without short keys | No bracket; `#N` or a body link identifies the item | — |
+
+How the ticket travels:
+
+| Artifact | Form |
+| :--- | :--- |
+| Issue title | `✨ [Req-004] feat(install): back up hook config` |
+| Issue body | `Tracker refs` section with the key and its URL |
+| Branch | `<login>/feat/<n>-back-up-hook-config` (no ticket) |
+| PR title / squash commit | `feat(install): :sparkles: back up hook config (#N)` (no ticket: parsers need the type first) |
+| Commit / PR footer | `Refs: Req-004` trailer, plus `Closes #N` in the PR |
+
+Ticket keys copied from a tracker are data: `cw lint-title` rejects anything outside the key shape, so a tracker field cannot inject text into titles, branches or commands.
+
+### Examples
+
+| Title | Verdict |
+| :--- | :--- |
+| `🔒️ feat(exec): pin gh project calls to the repository owner` | ✅ |
+| `✨ [Req-004] feat(install): back up hook config before writing it` | ✅ tracker-linked |
+| `feat(exec): pin gh project calls` | ❌ no gitmoji |
+| `✨🔒 feat(exec): …` | ❌ two emoji |
+| `:sparkles: feat(exec): …` | ❌ shortcode |
+| `✨ Feat(Exec): Added owner pinning.` | ❌ case, past tense, period |
+| `✨ feat: owner pinning` | ❌ missing scope |
+| `EPIC: Projects` | ❌ kind belongs in a label |
+| `✨ [Req-004][Req-005] feat(install): …` | ❌ more than one ticket |
+| `[Req-004] ✨ feat(install): …` | ❌ ticket before the gitmoji |
+| `✨ feat(install): back up hook config [Req-004]` | ❌ ticket at the end |
+| `✨ [N/A] feat(ci): …` | ❌ placeholder |
+
 ## 🚀 Releases (maintainers)
 
 1. Update the version in `SKILL.md` (`metadata.version`), `package.json`, `.claude-plugin/plugin.json` and `src/version.ts`; the validator requires them to match. Run `npm run build`.
