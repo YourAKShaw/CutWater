@@ -33,6 +33,7 @@
 | Dependencies | Dependabot / Renovate / none | **Dependabot** (native, no app install) | `dependencyBot` |
 | Branching | Default branch name | Existing default, else `main` | `defaultBranch` |
 | Extras | Wiki / Projects board / default-branch ruleset | off / off / **ask** | `wiki`, `projectsBoard`, `ruleset` |
+| | CodeRabbit config (`.coderabbit.yaml`)? Works only if the CodeRabbit app is installed. off / quiet / chill / assertive | **off**: third-party app, so never assumed. Suggest `assertive` for solo maintainers | `coderabbit` |
 | Labels | Emoji in label names? | no: plain names are easier to type in `--label` | `emojiLabels` |
 | Commit mode | Brand-new empty repository: commit setup directly to the default branch? | yes if empty, otherwise a setup branch and PR | `commitMode` (`direct` or `pr`) |
 
@@ -71,6 +72,7 @@ CI           lint ✓ test ✓ build ✓ release ✗
 Dependencies Dependabot
 Branch       main
 Extras       wiki ✗ · Projects ✗ · default-branch ruleset: <ask — blocks direct pushes, needs admin rights>
+             CodeRabbit config ✗ (off · quiet · chill · assertive; needs the CodeRabbit app)
 Labels       plain names (emoji: no)
 Commit mode  empty repo → commit setup directly to main (else a setup branch + PR)
 

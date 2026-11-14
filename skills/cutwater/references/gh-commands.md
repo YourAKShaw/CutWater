@@ -95,7 +95,7 @@ Use this only when Node.js is unavailable. Tell the user it is slower and less d
 | Helper step | By hand |
 | :--- | :--- |
 | `preflight` | The four preflight commands above |
-| `audit` | Check each A1–A16 path from `init-checklist.md` with `ls`; labels with `gh label list`; rulesets with `gh api repos/O/R/rulesets` |
+| `audit` | Check each A1–A17 path from `init-checklist.md` with `ls`; labels with `gh label list`; rulesets with `gh api repos/O/R/rulesets` |
 | `plan` | For each file, copy the template from `assets/`, replace every `{{name}}` with the answer, keep or drop each `{{#if …}}` block, and show `diff -u existing new` for existing files |
 | `apply` | Write approved files only; `gh label create … --force` per label in `assets/labels.json` |
 | `manifest write` | Write `.github/cutwater.json` per `assets/manifest.schema.json`, with `sha256sum` of each written file (LF line endings) |
