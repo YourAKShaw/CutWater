@@ -193,6 +193,7 @@ function humanApply(result: ApplyResult): string {
   }
   for (const command of result.plannedCommands) lines.push(`  would run: ${command.join(" ")}`);
   for (const failure of result.failures) lines.push(`  ❌ ${failure}`);
+  if (result.nextSteps.length > 0) lines.push("", ...result.nextSteps.map((step) => `ℹ️  ${step}`));
   return lines.join("\n");
 }
 
