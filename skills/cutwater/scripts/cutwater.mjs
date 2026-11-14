@@ -335,6 +335,8 @@ function createContext(overrides = {}) {
     runner: spawnRunner,
     dryRun: false,
     repo: null,
+    viewer: null,
+    projectIds: /* @__PURE__ */ new Set(),
     planned: [],
     retryBaseMs: envBase !== void 0 && envBase !== "" ? Number(envBase) : DEFAULT_RETRY_BASE_MS,
     logFile: process.env.CUTWATER_LOG ?? null,
@@ -349,6 +351,72 @@ var GH_READ = /* @__PURE__ */ new Set([
   "pr list",
   "pr checks",
   "run view"
+]);
+var OUTPUT = { "--format": true, "--jq": true, "--template": true };
+var PROJECT_SHORT = {
+  "-q": "--jq",
+  "-t": "--template",
+  "-L": "--limit",
+  "-R": "--repo"
+};
+var PROJECT_VERBS = {
+  list: {
+    write: false,
+    number: false,
+    flags: { ...OUTPUT, "--owner": true, "--closed": false, "--limit": true }
+  },
+  view: { write: false, number: true, flags: { ...OUTPUT, "--owner": true } },
+  "field-list": {
+    write: false,
+    number: true,
+    flags: { ...OUTPUT, "--owner": true, "--limit": true }
+  },
+  "item-list": {
+    write: false,
+    number: true,
+    flags: { ...OUTPUT, "--owner": true, "--limit": true, "--query": true }
+  },
+  create: { write: true, number: false, flags: { ...OUTPUT, "--owner": true, "--title": true } },
+  link: { write: true, number: true, flags: { "--owner": true, "--repo": true } },
+  "field-create": {
+    write: true,
+    number: true,
+    flags: {
+      ...OUTPUT,
+      "--owner": true,
+      "--name": true,
+      "--data-type": true,
+      "--single-select-options": true
+    }
+  },
+  "item-add": { write: true, number: true, flags: { ...OUTPUT, "--owner": true, "--url": true } },
+  "item-edit": {
+    write: true,
+    number: false,
+    flags: {
+      ...OUTPUT,
+      "--id": true,
+      "--project-id": true,
+      "--field-id": true,
+      "--text": true,
+      "--number": true,
+      "--date": true,
+      "--single-select-option-id": true,
+      "--iteration-id": true,
+      "--clear": false
+    }
+  }
+};
+var PROJECT_NO_RETRY = /* @__PURE__ */ new Set(["create", "field-create"]);
+var PROJECT_FORBIDDEN = /* @__PURE__ */ new Set([
+  "delete",
+  "close",
+  "unlink",
+  "field-delete",
+  "item-delete",
+  "item-archive",
+  "copy",
+  "mark-template"
 ]);
 var GH_WRITE = /* @__PURE__ */ new Set(["repo create", "label create"]);
 var GH_FORBIDDEN = /* @__PURE__ */ new Set([
@@ -402,13 +470,14 @@ function isMutating(cmd, args) {
   if (cmd !== "gh") return false;
   const verb = `${args[0] ?? ""} ${args[1] ?? ""}`;
   if (GH_WRITE.has(verb)) return true;
+  if (args[0] === "project") return PROJECT_VERBS[args[1] ?? ""]?.write ?? false;
   if (args[0] === "api") return parseApiArgs(args).method !== "GET";
   return false;
 }
 function forbidden(message) {
   return new CutwaterError("FORBIDDEN", message);
 }
-function assertAllowed(cmd, args, pinnedRepo) {
+function assertAllowed(cmd, args, pinnedRepo, scope = {}) {
   if (cmd === "git") {
     const sub = args[0] ?? "";
     if (!GIT_ALLOWED.has(sub)) throw forbidden(`git ${sub} is not on cutwater's allowlist`);
@@ -427,6 +496,10 @@ function assertAllowed(cmd, args, pinnedRepo) {
   const verb = `${args[0] ?? ""} ${args[1] ?? ""}`;
   if (GH_FORBIDDEN.has(verb)) throw forbidden(`gh ${verb} is never run by cutwater`);
   if (args[0] === "--version") return;
+  if (args[0] === "project") {
+    assertProjectCall(args, pinnedRepo, scope);
+    return;
+  }
   if (args[0] === "api") {
     const { method, path } = parseApiArgs(args);
     if (/\/merges?$|\/merge\b/.test(path) || path.includes("auto-merge")) {
@@ -458,6 +531,81 @@ function assertAllowed(cmd, args, pinnedRepo) {
   if (repoFlag === null) throw forbidden(`gh ${verb} must be pinned with --repo`);
   if (pinnedRepo !== null && repoFlag.toLowerCase() !== pinnedRepo.toLowerCase()) {
     throw forbidden(`refusing to touch ${repoFlag}: this run is pinned to ${pinnedRepo}`);
+  }
+}
+function parseProjectArgs(verb, args) {
+  const spec = PROJECT_VERBS[verb];
+  if (!spec) throw forbidden(`gh project ${verb} is not on cutwater's allowlist`);
+  const values = /* @__PURE__ */ new Map();
+  let positionals = 0;
+  for (let i = 2; i < args.length; i++) {
+    const arg = args[i] ?? "";
+    if (arg === "--") throw forbidden(`gh project ${verb} does not accept --`);
+    if (!arg.startsWith("-")) {
+      if (!spec.number || positionals > 0 || !/^\d+$/.test(arg)) {
+        throw forbidden(`gh project ${verb}: unexpected argument ${arg}`);
+      }
+      positionals++;
+      continue;
+    }
+    const eq = arg.startsWith("--") ? arg.indexOf("=") : -1;
+    const raw = eq === -1 ? arg : arg.slice(0, eq);
+    const name = PROJECT_SHORT[raw] ?? raw;
+    if (!(name in spec.flags)) throw forbidden(`gh project ${verb} does not allow ${raw}`);
+    if (values.has(name)) throw forbidden(`${name} may be given only once`);
+    let value = "";
+    if (spec.flags[name]) {
+      value = eq === -1 ? args[++i] ?? "" : arg.slice(eq + 1);
+      if (value === "") throw forbidden(`gh project ${verb}: ${name} needs a value`);
+      if (eq === -1 && value.startsWith("-")) {
+        throw forbidden(`gh project ${verb}: pass a value starting with - as ${name}=VALUE`);
+      }
+    } else if (eq !== -1) {
+      throw forbidden(`gh project ${verb}: ${name} takes no value`);
+    }
+    values.set(name, value);
+  }
+  return values;
+}
+function assertProjectCall(args, pinnedRepo, scope) {
+  const verb = args[1] ?? "";
+  if (PROJECT_FORBIDDEN.has(verb)) throw forbidden(`gh project ${verb} is never run by cutwater`);
+  const flags = parseProjectArgs(verb, args);
+  if (pinnedRepo === null) throw forbidden(`gh project ${verb} needs a pinned repository`);
+  const pinnedOwner = (pinnedRepo.split("/")[0] ?? "").toLowerCase();
+  if (verb === "item-edit") {
+    const projectId = flags.get("--project-id");
+    if (projectId === void 0) throw forbidden("gh project item-edit must pass --project-id");
+    if (!flags.has("--id")) throw forbidden("gh project item-edit must pass --id");
+    if (!scope.projectIds?.has(projectId)) {
+      throw forbidden(
+        `refusing to edit items of project ${projectId}: it is not verified as ${pinnedOwner}'s`
+      );
+    }
+    return;
+  }
+  const owner = flags.get("--owner");
+  if (owner === void 0) throw forbidden(`gh project ${verb} must be pinned with --owner`);
+  const resolved = owner === "@me" ? scope.viewer ?? null : owner;
+  if (resolved === null || resolved.toLowerCase() !== pinnedOwner) {
+    throw forbidden(`refusing to touch projects of ${owner}: this run is pinned to ${pinnedRepo}`);
+  }
+  if (verb === "item-add") {
+    const url = flags.get("--url") ?? null;
+    const match = url === null ? null : /^https:\/\/github\.com\/([^/]+\/[^/]+)\/(issues|pull)\/\d+$/.exec(url);
+    if (match?.[1]?.toLowerCase() !== pinnedRepo.toLowerCase()) {
+      throw forbidden(
+        `refusing to add ${url ?? "no URL"}: only issues and pull requests of ${pinnedRepo}`
+      );
+    }
+  }
+  if (verb === "link") {
+    const repo = flags.get("--repo") ?? null;
+    if (repo === null || repo.toLowerCase() !== pinnedRepo.toLowerCase()) {
+      throw forbidden(
+        `refusing to link ${repo ?? "no repository"}: this run is pinned to ${pinnedRepo}`
+      );
+    }
   }
 }
 function assertPinnedApiPath(path, pinnedRepo, read) {
@@ -499,7 +647,7 @@ function log(ctx, entry) {
 }
 var sleep = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
 async function run(ctx, cmd, args, opts = {}) {
-  assertAllowed(cmd, args, ctx.repo);
+  assertAllowed(cmd, args, ctx.repo, { viewer: ctx.viewer, projectIds: ctx.projectIds });
   const mutating = isMutating(cmd, args);
   if (mutating && ctx.dryRun) {
     ctx.planned.push({ cmd, args });
@@ -523,7 +671,8 @@ async function run(ctx, cmd, args, opts = {}) {
       throw new CutwaterError("USAGE", `git ${args.join(" ")} failed: ${result.stderr.trim()}`);
     }
     const failure = classifyGhFailure(result.stderr);
-    if (failure.transient && attempt < MAX_RETRIES) {
+    const replaySafe = !(args[0] === "project" && PROJECT_NO_RETRY.has(args[1] ?? ""));
+    if (failure.transient && replaySafe && attempt < MAX_RETRIES) {
       const delay = ctx.retryBaseMs * 2 ** attempt * (1 + Math.random() * 0.5);
       attempt++;
       await sleep(delay);
@@ -3020,6 +3169,7 @@ async function viewerLogin(ctx) {
   const login = JSON.parse(result.stdout).login;
   if (typeof login !== "string" || login === "")
     throw new CutwaterError("AUTH", "gh api user returned no login");
+  ctx.viewer = login;
   return login;
 }
 async function repoView(ctx, repo) {
