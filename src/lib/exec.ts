@@ -267,17 +267,24 @@ function assertPinnedApiPath(path: string, pinnedRepo: string | null, read: bool
  * The value of a pinning flag, refusing any repeat. gh takes the last value
  * of a repeated flag, so checking only one occurrence would let
  * `--repo pinned --repo other` slip past the pin (#46). Matches `--long V`,
- * `--long=V`, `-S V`, `-S=V` and `-SV`. Throws FORBIDDEN on a second one.
+ * `--long=V`, `-S V`, `-S=V`, `-SV`, and `S` inside a short-flag cluster
+ * (`-vSV`, `-vS V`). It scans every argument, even after `--`, because `--`
+ * can be another flag's value (`--search -- --repo other`). Anything that
+ * merely looks like the flag counts too, so the check fails closed.
+ * Throws FORBIDDEN on a second occurrence.
  */
 export function singleFlagValue(args: string[], long: string, short?: string): string | null {
+  const letter = short?.slice(1);
   const values: string[] = [];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i] ?? "";
-    if (arg === "--") break;
-    if (arg === long || (short !== undefined && arg === short)) values.push(args[++i] ?? "");
+    if (arg === long) values.push(args[++i] ?? "");
     else if (arg.startsWith(`${long}=`)) values.push(arg.slice(long.length + 1));
-    else if (short !== undefined && arg.startsWith(short) && !arg.startsWith("--")) {
-      values.push(arg.slice(short.length).replace(/^=/, ""));
+    else if (letter && arg.length > 1 && arg.startsWith("-") && !arg.startsWith("--")) {
+      const at = arg.indexOf(letter, 1);
+      if (at === -1) continue;
+      const attached = arg.slice(at + 1).replace(/^=/, "");
+      values.push(attached !== "" ? attached : (args[++i] ?? ""));
     }
   }
   if (values.length > 1) throw forbidden(`${long} may be given only once`);
