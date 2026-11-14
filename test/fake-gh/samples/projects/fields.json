@@ -1,0 +1,84 @@
+{
+  "fields": [
+    {
+      "id": "PVTF_lAHOAxJpEs4BriGOzhp0aeo",
+      "name": "Title",
+      "type": "ProjectV2Field"
+    },
+    {
+      "id": "PVTF_lAHOAxJpEs4BriGOzhp0aes",
+      "name": "Assignees",
+      "type": "ProjectV2Field"
+    },
+    {
+      "id": "PVTSSF_lAHOAxJpEs4BriGOzhp0aew",
+      "name": "Status",
+      "options": [
+        {
+          "id": "f75ad846",
+          "name": "Todo"
+        },
+        {
+          "id": "47fc9ee4",
+          "name": "In Progress"
+        },
+        {
+          "id": "98236657",
+          "name": "Done"
+        }
+      ],
+      "type": "ProjectV2SingleSelectField"
+    },
+    {
+      "id": "PVTF_lAHOAxJpEs4BriGOzhp0ae0",
+      "name": "Labels",
+      "type": "ProjectV2Field"
+    },
+    {
+      "id": "PVTF_lAHOAxJpEs4BriGOzhp0ae4",
+      "name": "Linked pull requests",
+      "type": "ProjectV2Field"
+    },
+    {
+      "id": "PVTF_lAHOAxJpEs4BriGOzhp0ae8",
+      "name": "Milestone",
+      "type": "ProjectV2Field"
+    },
+    {
+      "id": "PVTF_lAHOAxJpEs4BriGOzhp0afA",
+      "name": "Repository",
+      "type": "ProjectV2Field"
+    },
+    {
+      "id": "PVTF_lAHOAxJpEs4BriGOzhp0afI",
+      "name": "Reviewers",
+      "type": "ProjectV2Field"
+    },
+    {
+      "id": "PVTF_lAHOAxJpEs4BriGOzhp0afM",
+      "name": "Parent issue",
+      "type": "ProjectV2Field"
+    },
+    {
+      "id": "PVTF_lAHOAxJpEs4BriGOzhp0afQ",
+      "name": "Sub-issues progress",
+      "type": "ProjectV2Field"
+    },
+    {
+      "id": "PVTF_lAHOAxJpEs4BriGOzhp0afU",
+      "name": "Created",
+      "type": "ProjectV2Field"
+    },
+    {
+      "id": "PVTF_lAHOAxJpEs4BriGOzhp0afc",
+      "name": "Updated",
+      "type": "ProjectV2Field"
+    },
+    {
+      "id": "PVTF_lAHOAxJpEs4BriGOzhp0afo",
+      "name": "Closed",
+      "type": "ProjectV2Field"
+    }
+  ],
+  "totalCount": 13
+}

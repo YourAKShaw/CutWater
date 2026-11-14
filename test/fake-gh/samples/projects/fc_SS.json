@@ -1,0 +1,23 @@
+{
+  "id": "PVTSSF_lAHOAxJpEs4BriGOzhp0aoU",
+  "name": "Priority",
+  "options": [
+    {
+      "id": "9fa51bd4",
+      "name": "P0"
+    },
+    {
+      "id": "ef6eee24",
+      "name": "P1"
+    },
+    {
+      "id": "275598cd",
+      "name": "P2"
+    },
+    {
+      "id": "040eff79",
+      "name": "P3"
+    }
+  ],
+  "type": "ProjectV2SingleSelectField"
+}

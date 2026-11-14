@@ -1,0 +1,26 @@
+{
+  "data": {
+    "updateProjectV2Field": {
+      "projectV2Field": {
+        "options": [
+          {
+            "id": "b0aa2c34",
+            "name": "Todo"
+          },
+          {
+            "id": "a024ba18",
+            "name": "In Progress"
+          },
+          {
+            "id": "5209e95e",
+            "name": "In Review"
+          },
+          {
+            "id": "6cb19246",
+            "name": "Done"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -3,6 +3,7 @@
 ## Contents
 
 - [Command table](#command-table)
+- [Projects (V2)](#projects-v2)
 - [Token scopes](#token-scopes)
 - [Manual mode](#manual-mode)
 - [Version notes](#version-notes)
@@ -39,6 +40,39 @@ Placeholders: `O/R` is `owner/name` from preflight, `N` is an issue or PR number
 
 Reactions accepted by the REST API: `+1`, `-1`, `laugh`, `confused`, `heart`, `hooray`, `rocket`, `eyes`.
 
+## Projects (V2)
+
+Verified on gh 2.100.0 on 2026-11-14 against a throwaway user-owned Project (#6), with a classic OAuth token. Raw samples: `test/fake-gh/samples/projects/`. Every `gh project` command uses GraphQL and needs `read:project` for reads or `project` for writes. Commands that take a Project number also take `--owner O` (`--owner @me` means the current user); `link` and `unlink` add `--repo O/R`. Commands that act on an id instead take no `--owner`: `field-delete --id FID`, and `item-edit` with `--project-id`. Placeholders: `P` is the Project number, `PID` its node id (`PVT_…`), `FID` a field id, `OID` an option id, `ITEM` an item id (`PVTI_…`).
+
+| Command | JSON shape (`--format json`) | Repeat / idempotency | Errors (exit 1) |
+| :--- | :--- | :--- | :--- |
+| `gh project list --owner O --format json` | `{projects[], totalCount}` | Read | No scope: `your authentication token is missing required scopes [read:project]` |
+| `gh project view P --owner O --format json` | `{id, number, title, url, public, closed, readme, shortDescription, owner{login,type}, fields{totalCount}, items{totalCount}}` | Read | `GraphQL: Could not resolve to a ProjectV2 with the number P. (user.projectV2)` |
+| `gh project create --owner O --title T --format json` | Same as `view` | **Not idempotent**: a second create with the same title makes a new Project. Look it up first | — |
+| `gh project link P --owner O --repo O/R` (and `unlink`) | No output | A repeat link and a repeat unlink both exit 0 silently. Verify with GraphQL `repository{projectsV2{nodes{number}}}` | — |
+| `gh project field-list P --owner O --format json` | `{fields[{id, name, type, options?[{id, name}]}], totalCount}`. A new Project has 13 built-in fields, including `Status` (Todo, In Progress, Done) | Read; default `--limit 30` | — |
+| `gh project field-create P --owner O --name X --data-type TEXT\|NUMBER\|DATE\|SINGLE_SELECT [--single-select-options "A,B"] --format json` | `{id, name, type, options?}` | **Not idempotent**: a duplicate name fails | `GraphQL: Name has already been taken (createProjectV2Field)`. `ITERATION` is rejected by the flag: `valid values are {TEXT\|SINGLE_SELECT\|DATE\|NUMBER}` |
+| `gh project item-add P --owner O --url URL --format json` | `{id, title, type: Issue\|PullRequest, url, body}` | **Idempotent**: a repeat add returns the same item id | `resource not found, please check the URL` |
+| `gh project item-list P --owner O --format json --limit N` | `{items[{id, title, content{…}, status, labels, milestone, assignees, repository}], totalCount}` (observed with only built-in fields set; other fields with a value add their own keys, not captured) | Read; default `--limit 30`, gh pages internally | — |
+| `gh project item-edit --id ITEM --project-id PID --field-id FID --single-select-option-id OID --format json` | Same as `item-add` | Idempotent (sets a value) | `GraphQL: The single select option Id does not belong to the field (updateProjectV2ItemFieldValue)` |
+| `gh project edit P --owner O --readme R --description D --visibility PUBLIC\|PRIVATE --format json` | Same as `view` | Idempotent | — |
+| `gh project delete P --owner O --format json` | Includes `number` and `title` (full shape not captured) | A second delete fails with the not-found error above | — |
+
+Beyond the `gh project` flags:
+
+| Capability | Result | How |
+| :--- | :--- | :--- |
+| Change the built-in `Status` options | **Possible** | GraphQL `updateProjectV2Field(input:{fieldId, singleSelectOptions:[{id, name, color, description}]})`. It replaces the whole list. Pass each existing option's `id` to keep it: an option sent without an `id` gets a new one (observed), and per the schema, items set to a dropped or re-created option lose their value. Re-read the ids afterwards |
+| `ITERATION` field | **GraphQL only** | `createProjectV2Field(input:{projectId, dataType:ITERATION, name, iterationConfiguration:{startDate, duration, iterations:[]}})` |
+| Create views | **Possible** | REST `POST users/O/projectsV2/P/views` (`orgs/O/…` for organisations; the docs name the path parameter `user_id`, and the login `O` worked) with `name` and `layout` (table, board or roadmap), plus optional `filter`, `visible_fields`, `sort_by`, `group_by` and `vertical_group_by` (one grouping field each; Title, Reviewers, Linked pull requests, Sub-issues progress, Tracked by and Tracks cannot be grouped). `sort_by` is a list of `[field_id, "asc"]` or `[field_id, "desc"]` pairs. `visible_fields`, `group_by` and `vertical_group_by` take **numeric** field ids from REST `GET users/O/projectsV2/P/fields` (or GraphQL `databaseId`), not the `PVTF_…` node ids from `gh project field-list`. REST can only create views; there is no update endpoint, so **change sort or grouping on an existing view in the web UI**. GraphQL `createProjectV2View` takes `projectId`, `name`, `layout` and `configuration.visibleFieldIds`; a filter needs a separate `updateProjectV2View` call; neither sorts nor groups. `gh project` has no view command |
+| Built-in workflows (auto-add, item closed, PR merged, …) | **Read and delete only** | `ProjectV2.workflows` lists them with `enabled`; the only mutation is `deleteProjectV2Workflow`. Enabling or configuring them is web-UI only. A new Project starts with "Auto-add sub-issues to project" on and the rest off |
+| Rate and size | **Expensive with gh** | Measured with `rateLimit(dryRun:true)`: gh's own item-list query (captured with `GH_DEBUG=api`) costs **101 points per 100-item page**, because each item requests `fieldValues(first:100)`. About 500 issues take 5 pages, roughly 505 of 5,000 points an hour. A bare `items(first:100){totalCount}` costs 1 point. For lookups, query only the fields needed instead of calling `gh project item-list` |
+
+**Unverified:**
+
+- The minimum gh version per flag: only 2.100.0 was tested.
+- Fine-grained PATs and organisation Projects: no fine-grained token or organisation was available. Community reports say fine-grained PATs cannot reach user-owned Projects.
+
 ## Token scopes
 
 | Feature | Classic OAuth scope | Fine-grained permission |
@@ -46,10 +80,13 @@ Reactions accepted by the REST API: `+1`, `-1`, `laugh`, `confused`, `heart`, `h
 | Issues, PRs, labels, private repositories | `repo` | Issues, Pull requests: write; Contents: write; Metadata: read |
 | Pushing `.github/workflows/*` | `workflow` | Workflows: write |
 | Rulesets | `repo` (as a repository admin) | Administration: write |
-| Projects board | `project` | Projects: write (organization) |
+| Projects board: read | `read:project` (verified) | Projects: read (organization only) |
+| Projects board: write | `project` (verified; includes read) | Projects: write (organization only) |
 | Deleting sandbox repositories (maintainers only) | `delete_repo` | Administration: write |
 
 Add a scope with `gh auth refresh -s <scope>`. `gh auth status` lists classic scopes; fine-grained tokens show none, so check those permissions in the token settings. Treat this table as a guide, and confirm against GitHub's documentation if a call returns 403. Recommend a fine-grained token limited to the one repository when the user worries about blast radius.
+
+**GitHub App bots cannot manage user-owned Projects.** Apps have only an organisation Projects permission, and every Projects endpoint open to installation tokens is under `/orgs/{org}/projectsV2` ([permissions](https://docs.github.com/en/rest/authentication/permissions-required-for-github-apps), [endpoints](https://docs.github.com/en/rest/authentication/endpoints-available-for-github-app-installation-access-tokens)). On a personal account, Project commands run as the user (#40). After `gh auth refresh -s project`, `gh auth status` lists `'project'` among the token scopes.
 
 ## Manual mode
 
