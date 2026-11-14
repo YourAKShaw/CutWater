@@ -6,6 +6,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
+- `references/coderabbit.md` walks users through CodeRabbit setup (app install, a seat for bot authors, re-review commands, stale change requests, optional CLI), and `cw plan` points to it when CodeRabbit is chosen ([#54](https://github.com/YourAKShaw/CutWater/issues/54)).
 - Phase 0 can scaffold an optional `.coderabbit.yaml` (interview answer `coderabbit`: `off`, `quiet`, `chill` or `assertive`; default `off`). It has stack-aware `path_instructions`, workflow-security review guidance and a short `tone_instructions`. Audit item A17 checks it only when it was chosen ([#52](https://github.com/YourAKShaw/CutWater/issues/52)).
 - Copyright and `SPDX-License-Identifier: Apache-2.0` headers on every owned source file, and `npm run license:check` in CI so new files cannot skip it ([#30](https://github.com/YourAKShaw/CutWater/issues/30)).
 - Issue title convention in `CONTRIBUTING.md`: `<gitmoji> [<ticket>] <type>(<scope>)[!]: <summary>`, with a gitmoji-per-type table and a tracker-linked variant for Entalpa, Jira and Linear keys ([#4](https://github.com/YourAKShaw/CutWater/issues/4)).

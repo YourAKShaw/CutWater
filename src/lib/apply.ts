@@ -13,6 +13,7 @@
  * are never clobbered.
  */
 import { join } from "node:path";
+import { coderabbitNextSteps } from "./coderabbit.ts";
 import type { Answers } from "./answers.ts";
 import { validateAnswers } from "./answers.ts";
 import { CutwaterError } from "./errors.ts";
@@ -33,6 +34,8 @@ export interface ApplyResult {
   plannedCommands: string[][];
   changes: number;
   failures: string[];
+  /** User actions to show once setup is applied; empty unless an optional tool needs them. */
+  nextSteps: string[];
 }
 
 export interface ApplyOptions {
@@ -82,6 +85,7 @@ export async function applyPlan(
     plannedCommands: [],
     changes: 0,
     failures: [],
+    nextSteps: [],
   };
   const gated = plan.entries.filter(needsApproval).map((entry) => entry.id);
   if (opts.approved === null && gated.length > 0) {
@@ -189,6 +193,7 @@ export async function applyPlan(
     result.manifest = "unchanged";
   }
   if (result.changes === 0) result.status = "no-changes";
+  result.nextSteps = coderabbitNextSteps(answers);
   return result;
 }
 

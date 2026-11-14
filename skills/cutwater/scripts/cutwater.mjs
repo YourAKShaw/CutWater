@@ -978,6 +978,20 @@ function templateVars(answers, root) {
 // src/lib/apply.ts
 import { join as join5 } from "node:path";
 
+// src/lib/coderabbit.ts
+var CODERABBIT_REFERENCE = "references/coderabbit.md";
+function coderabbitNextSteps(answers) {
+  if (answers.coderabbit === void 0 || answers.coderabbit === "off") return [];
+  return [
+    "CodeRabbit next steps (user actions; details in " + CODERABBIT_REFERENCE + "):",
+    "1. Install the CodeRabbit GitHub App on the repository.",
+    "2. If a bot opens the PRs, assign it a review seat in CodeRabbit Team Management (may be billed).",
+    "3. Commit the CodeRabbit config with the setup.",
+    "4. Keep CodeRabbit out of the ruleset's required checks.",
+    "5. Optional: install the CodeRabbit CLI and run `cr auth login` yourself."
+  ];
+}
+
 // src/lib/manifest.ts
 import { join as join4 } from "node:path";
 
@@ -1186,7 +1200,8 @@ async function applyPlan(ctx, plan, opts) {
     pendingConfirmation: [],
     plannedCommands: [],
     changes: 0,
-    failures: []
+    failures: [],
+    nextSteps: []
   };
   const gated = plan.entries.filter(needsApproval).map((entry) => entry.id);
   if (opts.approved === null && gated.length > 0) {
@@ -1288,6 +1303,7 @@ async function applyPlan(ctx, plan, opts) {
     result.manifest = "unchanged";
   }
   if (result.changes === 0) result.status = "no-changes";
+  result.nextSteps = coderabbitNextSteps(answers);
   return result;
 }
 function applyFile(ctx, entry, root, approved, result) {
@@ -2978,7 +2994,8 @@ function fileSpecs(answers, root) {
       render: asset("repo/coderabbit.yaml"),
       satisfiedBy: () => {
         const found = coderabbitConfig(root);
-        return found !== null && found !== ".coderabbit.yaml" ? found : null;
+        if (found !== null && found !== ".coderabbit.yaml") return found;
+        return readText(join7(root, ".coderabbit.config.ts")) === null ? null : ".coderabbit.config.ts";
       }
     });
   }
@@ -3098,6 +3115,10 @@ function computePlan(input) {
   if (answers.ruleset)
     notes.push(
       "Ruleset chosen: run `ruleset ensure` after the setup commit reaches the default branch (it blocks direct pushes)."
+    );
+  if (answers.coderabbit !== void 0 && answers.coderabbit !== "off")
+    notes.push(
+      "CodeRabbit chosen: the config works only once the user installs the CodeRabbit GitHub App; a bot that opens PRs needs a review seat. Walk them through references/coderabbit.md."
     );
   if (answers.wiki)
     notes.push(
@@ -3443,6 +3464,7 @@ Show the user each diff, then re-run with --yes <ids> (or --yes none to decline 
   }
   for (const command of result.plannedCommands) lines.push(`  would run: ${command.join(" ")}`);
   for (const failure of result.failures) lines.push(`  ❌ ${failure}`);
+  if (result.nextSteps.length > 0) lines.push("", ...result.nextSteps.map((step) => `ℹ️  ${step}`));
   return lines.join("\n");
 }
 async function pinned(env, opts) {
