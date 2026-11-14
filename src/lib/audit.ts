@@ -91,9 +91,16 @@ export function dependencyConfig(root: string): string | null {
   );
 }
 
-/** CodeRabbit reads `.coderabbit.yaml` (or `.yml`) from the repository root. */
+/**
+ * CodeRabbit's root config, in its precedence order: a committed
+ * `.coderabbit.yaml` or `.yml` wins over `.coderabbit.config.ts`, so writing
+ * YAML next to a TypeScript config would silently disable it.
+ */
 export function coderabbitConfig(root: string): string | null {
-  return findFile(root, [""], /^\.coderabbit\.ya?ml$/);
+  return (
+    findFile(root, [""], /^\.coderabbit\.ya?ml$/) ??
+    findFile(root, [""], /^\.coderabbit\.config\.ts$/)
+  );
 }
 
 interface FileItemSpec {

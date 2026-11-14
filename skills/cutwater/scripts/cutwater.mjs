@@ -1470,7 +1470,7 @@ function dependencyConfig(root) {
   return findFile(root, [".github"], /^dependabot\.ya?ml$/) ?? findFile(root, ["", ".github"], /^renovate\.json5?$/) ?? findFile(root, [""], /^\.renovaterc(\.json5?)?$/);
 }
 function coderabbitConfig(root) {
-  return findFile(root, [""], /^\.coderabbit\.ya?ml$/);
+  return findFile(root, [""], /^\.coderabbit\.ya?ml$/) ?? findFile(root, [""], /^\.coderabbit\.config\.ts$/);
 }
 var FILE_ITEMS = [
   {

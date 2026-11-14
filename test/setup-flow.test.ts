@@ -325,3 +325,15 @@ test("the default-branch ruleset never requires a CodeRabbit check", () => {
   // CodeRabbit can skip or be rate-limited; requiring it would block merges.
   assert.doesNotMatch(JSON.stringify(desiredRuleset()), /coderabbit/i);
 });
+
+test("a .coderabbit.config.ts is respected: no YAML is written to override it", async () => {
+  const box = sandbox({
+    files: { ".coderabbit.config.ts": "export default {};\n" },
+  });
+  const answers = await answersFor(box, { coderabbit: "assertive" });
+  const entry = (await plan(box, answers)).entries.find(
+    (item) => item.id === "file:.coderabbit.yaml",
+  );
+  assert.equal(entry?.action, "skip");
+  assert.match(entry?.reason ?? "", /\.coderabbit\.config\.ts/);
+});

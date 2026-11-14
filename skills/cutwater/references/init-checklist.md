@@ -32,7 +32,7 @@
 | A14 | Labels | Every label in `assets/labels.json` exists with the same color and description | `gh label create --force` |
 | A15 | Default-branch ruleset | A ruleset targets `~DEFAULT_BRANCH`; required only when the manifest says it was chosen | ruleset API (gated) |
 | A16 | Manifest | `.github/cutwater.json` is valid against `assets/manifest.schema.json` | written by `apply` |
-| A17 | CodeRabbit config | `.coderabbit.yaml` or `.coderabbit.yml` in the root; required only when the manifest records a `coderabbit` profile | scaffold |
+| A17 | CodeRabbit config | `.coderabbit.yaml`, `.coderabbit.yml` or `.coderabbit.config.ts` in the root (YAML wins over TypeScript, so an existing TypeScript config is never shadowed); required only when the manifest records a `coderabbit` profile | scaffold |
 
 Statuses: ✅ pass, ❌ fail, 🏢 provided by org defaults, ❔ unknown (needs network or permission), ➖ not applicable.
 
