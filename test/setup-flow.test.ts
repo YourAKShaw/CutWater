@@ -364,3 +364,18 @@ test("apply lists the CodeRabbit next steps only when CodeRabbit is chosen", asy
     }
   }
 });
+
+test("a ruleset create whose response is lost is reconciled, not duplicated", async () => {
+  const box = sandbox();
+  box.ctx.retryBaseMs = 0;
+  box.state.lostResponses = [{ match: "--method POST repos/octocat/demo/rulesets", times: 1 }];
+  const outcome = await ensureRuleset(box.ctx, "octocat/demo", true);
+  assert.equal(outcome.action, "created");
+  const repo = box.state.repos["octocat/demo"];
+  assert.equal(repo?.rulesets.length, 1);
+  assert.equal(outcome.id, repo?.rulesets[0]?.id);
+  const posts = box.state.calls.filter(
+    (args) => args[0] === "api" && args.includes("POST") && args.join(" ").includes("rulesets"),
+  );
+  assert.equal(posts.length, 1);
+});

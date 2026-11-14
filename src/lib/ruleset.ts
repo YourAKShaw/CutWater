@@ -105,7 +105,20 @@ export async function ensureRuleset(
     command = ["api", "--method", "POST", `repos/${repo}/rulesets`, "--input", "-"];
   }
   if (!confirmed) return { action: "needs-confirmation", id, command: ["gh", ...command] };
-  const result = await gh(ctx, command, { input: JSON.stringify(desired) });
+  const result = await gh(ctx, command, {
+    input: JSON.stringify(desired),
+    // A create whose response was lost may have landed: look it up by name first.
+    ...(lookup.ruleset
+      ? {}
+      : {
+          reconcile: async () => {
+            const again = await findRuleset(ctx, repo);
+            return again.ruleset
+              ? { code: 0, stdout: JSON.stringify({ id: again.ruleset.id }), stderr: "" }
+              : null;
+          },
+        }),
+  });
   if (ctx.dryRun) return { action: "planned", id, command: ["gh", ...command] };
   const created = JSON.parse(result.stdout || "{}") as { id?: number };
   return {

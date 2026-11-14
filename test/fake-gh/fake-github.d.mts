@@ -38,6 +38,8 @@ export interface FakeState {
   scopes: string[] | null;
   repos: Record<string, FakeRepo>;
   orgDotGithub: Record<string, string[]>;
+  /** Calls that take effect but return a failure to the client. */
+  lostResponses?: { match: string; times: number; stderr?: string }[];
   failures: { match: string; stderr: string; times: number }[];
   nextId: number;
   calls: string[][];
