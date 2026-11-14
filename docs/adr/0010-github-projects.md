@@ -1,6 +1,6 @@
 # ADR 0010: opt-in GitHub Projects as a one-way projection of labels
 
-**Status:** proposed (2026-11-14). It becomes accepted when its pull request merges.
+**Status:** accepted (2026-11-14)
 
 **Context.** v0.2.0 (#5) makes GitHub Projects (V2) a real, opt-in part of setup and the task loop. Projects touch four guarantees: setup ordering, a truthful manifest ([ADR 0005](0005-committed-manifest.md)), idempotency, and the allowlist with repository pinning in `src/lib/exec.ts`. Manifests v2 will live in users' repositories, so this is expensive to reverse. Every capability claim below comes from the verified matrix in [`gh-commands.md` → Projects (V2)](../../skills/cutwater/references/gh-commands.md#projects-v2) (#6, gh 2.100.0). The facts that shape the design:
 
