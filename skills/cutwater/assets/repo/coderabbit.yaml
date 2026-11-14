@@ -1,0 +1,67 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit review settings, written by cutwater. Takes effect only when the
+# CodeRabbit GitHub App is installed. Reference: https://docs.coderabbit.ai/reference/configuration
+# Keep CodeRabbit out of required status checks: it can skip or be rate-limited.
+language: en-US
+tone_instructions: Be concise, direct and constructive. Cite file and line, explain the risk, and suggest a concrete fix.
+reviews:
+  profile: {{coderabbitProfile}}
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  auto_review:
+    enabled: true
+    drafts: false
+  path_filters:
+    - "!**/dist/**"
+    - "!**/build/**"
+    - "!**/vendor/**"
+    - "!**/*.min.js"
+{{#if stackNode}}
+    - "!**/package-lock.json"
+    - "!**/pnpm-lock.yaml"
+    - "!**/yarn.lock"
+{{/if}}
+{{#if stackPython}}
+    - "!**/poetry.lock"
+    - "!**/uv.lock"
+{{/if}}
+{{#if stackGo}}
+    - "!**/go.sum"
+{{/if}}
+  path_instructions:
+{{#if stackNode}}
+    - path: "**/*.ts"
+      instructions: |
+        Focus on architecture and boundaries, error handling, input validation at
+        trust boundaries, async races and unhandled rejections, and type safety
+        (no unchecked `any` or non-null assertions hiding real cases).
+    - path: "**/*.js"
+      instructions: |
+        Focus on error handling, input validation at trust boundaries, async races
+        and unhandled rejections.
+{{/if}}
+{{#if stackPython}}
+    - path: "**/*.py"
+      instructions: |
+        Focus on error handling (no bare `except`), resource cleanup, type hints on
+        public functions, and input validation at trust boundaries.
+{{/if}}
+{{#if stackGo}}
+    - path: "**/*.go"
+      instructions: |
+        Focus on error wrapping and handling, context propagation and cancellation,
+        goroutine leaks, and data races.
+{{/if}}
+    - path: "**/{test,tests,__tests__}/**"
+      instructions: |
+        Check that tests assert observable behavior, cover failure paths, and do not
+        mock away the code under test.
+    - path: ".github/workflows/**"
+      instructions: |
+        Check least-privilege `permissions`, actions pinned to a full commit SHA or a
+        trusted tag, no secrets echoed to logs, and no untrusted `${{ github.event.* }}`
+        input interpolated into `run:` scripts.
+    - path: "**/*.md"
+      instructions: |
+        Check that the docs match the code, commands are runnable, and links resolve.

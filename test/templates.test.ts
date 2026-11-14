@@ -57,3 +57,29 @@ test("every asset template renders with the standard variables", () => {
     }
   }
 });
+
+test("the CodeRabbit template stays inside CodeRabbit's documented limits", () => {
+  const root = tempDir();
+  const { answers } = defaultAnswers({
+    detection: detect(root),
+    login: "octocat",
+    repo: "octocat/demo",
+    remoteExists: true,
+    isEmpty: false,
+    defaultBranch: "main",
+    year: "2026",
+  });
+  for (const stack of ["node-ts", "node", "python", "go", "generic"] as const) {
+    for (const coderabbit of ["quiet", "chill", "assertive"] as const) {
+      const out = renderAsset(
+        "repo/coderabbit.yaml",
+        templateVars({ ...answers, stack, coderabbit }, root),
+      );
+      assert.match(out, new RegExp(`^ {2}profile: ${coderabbit}$`, "m"));
+      // schema.v2.json caps tone_instructions at 250 characters.
+      const tone = /^tone_instructions: (.*)$/m.exec(out)?.[1] ?? "";
+      assert.ok(tone.length > 0 && tone.length <= 250, `tone is ${tone.length} chars`);
+      assert.doesNotMatch(out, /\t/, "YAML must not contain tabs");
+    }
+  }
+});

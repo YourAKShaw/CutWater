@@ -14,6 +14,7 @@ import { join } from "node:path";
 import type { Answers } from "./answers.ts";
 import { templateVars } from "./answers.ts";
 import {
+  coderabbitConfig,
   dependencyConfig,
   issueTemplateState,
   locate,
@@ -205,6 +206,17 @@ export function fileSpecs(answers: Answers, root: string): FileSpec[] {
       satisfiedBy: () => {
         const found = dependencyConfig(root);
         return found !== null && found !== "renovate.json" ? found : null;
+      },
+    });
+  }
+  if (answers.coderabbit !== undefined && answers.coderabbit !== "off") {
+    specs.push({
+      path: ".coderabbit.yaml",
+      template: "repo/coderabbit.yaml",
+      render: asset("repo/coderabbit.yaml"),
+      satisfiedBy: () => {
+        const found = coderabbitConfig(root);
+        return found !== null && found !== ".coderabbit.yaml" ? found : null;
       },
     });
   }

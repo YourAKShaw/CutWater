@@ -14,7 +14,7 @@ import { listLabels } from "../src/lib/labels.ts";
 import { readManifest } from "../src/lib/manifest.ts";
 import { computePlan } from "../src/lib/plan.ts";
 import { preflight } from "../src/lib/preflight.ts";
-import { ensureRuleset } from "../src/lib/ruleset.ts";
+import { desiredRuleset, ensureRuleset } from "../src/lib/ruleset.ts";
 import { MANIFEST_PATH } from "../src/version.ts";
 import { sandbox, writeFiles, type Sandbox } from "./helpers.ts";
 
@@ -263,4 +263,65 @@ test("ruleset ensure is gated, idempotent and updates instead of duplicating", a
   const updated = await ensureRuleset(box.ctx, "octocat/demo", true);
   assert.equal(updated.action, "updated");
   assert.equal(box.state.repos["octocat/demo"]?.rulesets.length, 1);
+});
+
+test("CodeRabbit is off by default: no file is planned and A17 does not apply", async () => {
+  const box = sandbox({ files: { "package.json": '{"name":"demo"}' } });
+  const answers = await answersFor(box);
+  assert.equal(answers.coderabbit, "off");
+  const result = await plan(box, answers);
+  assert.equal(
+    result.entries.some((entry) => entry.id === "file:.coderabbit.yaml"),
+    false,
+  );
+  const a17 = (await runAudit(box)).items.find((item) => item.id === "A17");
+  assert.equal(a17?.status, "n/a");
+  assert.equal(a17?.required, false);
+});
+
+test("choosing CodeRabbit scaffolds a stack-aware .coderabbit.yaml once", async () => {
+  const box = sandbox({
+    files: { "package.json": '{"name":"demo"}', "tsconfig.json": "{}" },
+  });
+  const answers = await answersFor(box, { coderabbit: "assertive" });
+  const first = await plan(box, answers);
+  const entry = first.entries.find((item) => item.id === "file:.coderabbit.yaml");
+  assert.ok(entry?.kind === "file");
+  assert.equal(entry.action, "create");
+  assert.match(entry.content, /^ {2}profile: assertive$/m);
+  assert.match(entry.content, /path: "\*\*\/\*\.ts"/);
+  assert.match(entry.content, /path: "\.github\/workflows\/\*\*"/);
+  assert.doesNotMatch(entry.content, /\*\*\/\*\.py|\*\*\/\*\.go/);
+  // GitHub expressions in the instructions survive rendering untouched.
+  assert.match(entry.content, /\$\{\{ github\.event\.\* \}\}/);
+
+  const applied = await applyPlan(box.ctx, first, { root: box.root, approved: null, now: NOW });
+  assert.equal(applied.status, "applied", JSON.stringify(applied.failures));
+  assert.equal(readManifest(box.root).manifest?.choices.coderabbit, "assertive");
+  assert.equal((await runAudit(box)).items.find((item) => item.id === "A17")?.status, "pass");
+  assert.equal((await plan(box, answers)).summary.noChanges, true);
+});
+
+test("an existing .coderabbit.yaml is a conflict, never an overwrite", async () => {
+  const box = sandbox({ files: { ".coderabbit.yaml": "reviews:\n  profile: chill\n" } });
+  const answers = await answersFor(box, { coderabbit: "assertive" });
+  const entry = (await plan(box, answers)).entries.find(
+    (item) => item.id === "file:.coderabbit.yaml",
+  );
+  assert.equal(entry?.action, "conflict");
+  assert.equal(entry?.gated, true);
+});
+
+test("a .coderabbit.yml already satisfies the requirement", async () => {
+  const box = sandbox({ files: { ".coderabbit.yml": "reviews:\n  profile: chill\n" } });
+  const answers = await answersFor(box, { coderabbit: "chill" });
+  const entry = (await plan(box, answers)).entries.find(
+    (item) => item.id === "file:.coderabbit.yaml",
+  );
+  assert.equal(entry?.action, "skip");
+});
+
+test("the default-branch ruleset never requires a CodeRabbit check", () => {
+  // CodeRabbit can skip or be rate-limited; requiring it would block merges.
+  assert.doesNotMatch(JSON.stringify(desiredRuleset()), /coderabbit/i);
 });

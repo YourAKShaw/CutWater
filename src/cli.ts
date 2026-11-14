@@ -75,7 +75,7 @@ Usage: node scripts/cutwater.mjs <command> [options]
 Setup (Phase 0)
   preflight                         git, gh auth, login, repository, token scopes
   audit [--offline] [--accept-org-defaults]
-                                    check items A1-A16 and classify the repository
+                                    check items A1-A17 and classify the repository
   defaults [--out answers.json]     interview defaults detected from the repository
   plan --answers FILE [--out FILE]  render templates and compare with disk (read-only)
   apply --plan FILE [--yes ID,ID | --yes-file FILE | --yes none] [--dry-run]

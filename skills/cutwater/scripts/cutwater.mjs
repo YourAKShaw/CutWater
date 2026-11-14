@@ -1469,6 +1469,9 @@ function workflowFiles(root) {
 function dependencyConfig(root) {
   return findFile(root, [".github"], /^dependabot\.ya?ml$/) ?? findFile(root, ["", ".github"], /^renovate\.json5?$/) ?? findFile(root, [""], /^\.renovaterc(\.json5?)?$/);
 }
+function coderabbitConfig(root) {
+  return findFile(root, [""], /^\.coderabbit\.ya?ml$/);
+}
 var FILE_ITEMS = [
   {
     id: "A3",
@@ -1708,6 +1711,17 @@ async function audit(ctx, opts) {
     found: manifestRead.exists ? ".github/cutwater.json" : null,
     detail: manifestRead.manifest ? "valid" : manifestRead.exists ? `invalid: ${manifestRead.errors.join("; ")}` : "missing",
     fix: FIX.A16 ?? ""
+  });
+  const coderabbitChosen = choices?.coderabbit !== void 0 && choices.coderabbit !== "off";
+  const coderabbitFound = coderabbitConfig(root);
+  items.push({
+    id: "A17",
+    title: "CodeRabbit config",
+    status: coderabbitFound ? "pass" : coderabbitChosen ? "fail" : "n/a",
+    required: coderabbitChosen,
+    found: coderabbitFound,
+    detail: coderabbitFound ?? (coderabbitChosen ? "missing" : "not chosen"),
+    fix: "scaffold"
   });
   const requiredItems = items.filter((item) => item.required);
   const passing = (item) => item.status === "pass" || item.status === "org-default" && acceptOrg;
@@ -2957,6 +2971,17 @@ function fileSpecs(answers, root) {
       }
     });
   }
+  if (answers.coderabbit !== void 0 && answers.coderabbit !== "off") {
+    specs.push({
+      path: ".coderabbit.yaml",
+      template: "repo/coderabbit.yaml",
+      render: asset("repo/coderabbit.yaml"),
+      satisfiedBy: () => {
+        const found = coderabbitConfig(root);
+        return found !== null && found !== ".coderabbit.yaml" ? found : null;
+      }
+    });
+  }
   specs.push(
     {
       path: ".gitignore",
@@ -3310,7 +3335,7 @@ Usage: node scripts/cutwater.mjs <command> [options]
 Setup (Phase 0)
   preflight                         git, gh auth, login, repository, token scopes
   audit [--offline] [--accept-org-defaults]
-                                    check items A1-A16 and classify the repository
+                                    check items A1-A17 and classify the repository
   defaults [--out answers.json]     interview defaults detected from the repository
   plan --answers FILE [--out FILE]  render templates and compare with disk (read-only)
   apply --plan FILE [--yes ID,ID | --yes-file FILE | --yes none] [--dry-run]
