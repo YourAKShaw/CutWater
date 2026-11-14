@@ -73,8 +73,16 @@ export async function gitInfo(ctx: ExecContext): Promise<GitInfo> {
   };
 }
 
+/** The `gh auth status` lines of the active account (all of it when none is marked). */
+function activeBlock(statusText: string): string {
+  const blocks = statusText.split(/\n(?=\s*[✓X!] .*account )/);
+  return blocks.find((block) => /Active account:\s*true/.test(block)) ?? statusText;
+}
+
 export function parseScopes(statusText: string): string[] | null {
-  const match = /Token scopes:\s*(.*)/.exec(statusText);
+  // With several accounts, only the active one's scopes apply: a bot token in
+  // GH_TOKEN must not inherit the keyring login's scopes.
+  const match = /Token scopes:\s*(.*)/.exec(activeBlock(statusText));
   if (!match) return null;
   const raw = (match[1] ?? "").trim();
   if (raw === "" || raw.toLowerCase() === "none") return [];

@@ -3201,8 +3201,12 @@ async function gitInfo(ctx) {
     originRepo: originUrl ? parseGithubRemote(originUrl) : null
   };
 }
+function activeBlock(statusText) {
+  const blocks = statusText.split(/\n(?=\s*[✓X!] .*account )/);
+  return blocks.find((block) => /Active account:\s*true/.test(block)) ?? statusText;
+}
 function parseScopes(statusText) {
-  const match = /Token scopes:\s*(.*)/.exec(statusText);
+  const match = /Token scopes:\s*(.*)/.exec(activeBlock(statusText));
   if (!match) return null;
   const raw = (match[1] ?? "").trim();
   if (raw === "" || raw.toLowerCase() === "none") return [];

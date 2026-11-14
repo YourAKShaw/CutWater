@@ -13,7 +13,7 @@ import { isMutating } from "../src/lib/exec.ts";
 import { listLabels } from "../src/lib/labels.ts";
 import { readManifest } from "../src/lib/manifest.ts";
 import { computePlan } from "../src/lib/plan.ts";
-import { isBotLogin, parseActiveAccount, preflight } from "../src/lib/preflight.ts";
+import { isBotLogin, parseActiveAccount, parseScopes, preflight } from "../src/lib/preflight.ts";
 import { CutwaterError } from "../src/lib/errors.ts";
 import { desiredRuleset, ensureRuleset } from "../src/lib/ruleset.ts";
 import { MANIFEST_PATH } from "../src/version.ts";
@@ -397,4 +397,22 @@ test("parses the active account from gh auth status", () => {
   assert.equal(parseActiveAccount(text.replace("true", "false")), null);
   assert.equal(isBotLogin("yourakshawai[bot]"), true);
   assert.equal(isBotLogin("YourAKShaw"), false);
+});
+
+test("token scopes come from the active account only", () => {
+  const text = [
+    "github.com",
+    "  ✓ Logged in to github.com account yourakshawai[bot] (GH_TOKEN)",
+    "  - Active account: true",
+    "  - Git operations protocol: https",
+    "  ✓ Logged in to github.com account YourAKShaw (keyring)",
+    "  - Active account: false",
+    "  - Token scopes: 'gist', 'project', 'repo'",
+  ].join("\n");
+  assert.equal(parseScopes(text), null);
+  assert.deepEqual(parseScopes(text.replace("true", "x").replace("false", "true")), [
+    "gist",
+    "project",
+    "repo",
+  ]);
 });
