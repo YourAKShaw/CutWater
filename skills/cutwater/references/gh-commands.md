@@ -66,7 +66,7 @@ Beyond the `gh project` flags:
 | `ITERATION` field | **GraphQL only** | `createProjectV2Field(input:{projectId, dataType:ITERATION, name, iterationConfiguration:{startDate, duration, iterations:[]}})` |
 | Create views | **Possible** | REST `POST users/O/projectsV2/P/views` (`orgs/O/…` for organisations) with `name` and `layout` (table, board or roadmap), plus optional `filter`, `visible_fields`, `sort_by`, `group_by` and `vertical_group_by` (one grouping field each; Title and Linked pull requests cannot be grouped). GraphQL `createProjectV2View` and `updateProjectV2View` accept only `layout`, `filter` and `visibleFieldIds`, so **set sort and grouping through REST**. `gh project` has no view command |
 | Built-in workflows (auto-add, item closed, PR merged, …) | **Read and delete only** | `ProjectV2.workflows` lists them with `enabled`; the only mutation is `deleteProjectV2Workflow`. Enabling or configuring them is web-UI only. A new Project starts with "Auto-add sub-issues to project" on and the rest off |
-| Rate and size | Cheap | GraphQL `items(first:100)` costs 1 point per page, so about 500 issues take 5 pages (5 of 5,000 points an hour). `gh project item-list --limit 500` pages internally |
+| Rate and size | Cheap | A bare GraphQL `items(first:100){totalCount}` cost 1 point (observed). `gh project item-list` also asks for each item's `fieldValues(first:100)` and nested connections, so a page costs more: about 2 points or more per 100 items by GitHub's formula (unverified), so roughly 10+ points for about 500 issues, out of 5,000 an hour. `gh project item-list --limit 500` pages internally |
 
 **Unverified:**
 
