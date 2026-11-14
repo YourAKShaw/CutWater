@@ -27,6 +27,8 @@ export interface RunResult {
 export interface RunOptions {
   cwd: string;
   input?: string;
+  /** Extra environment variables for this call. */
+  env?: Record<string, string>;
 }
 
 export type Runner = (cmd: string, args: string[], opts: RunOptions) => Promise<RunResult>;
@@ -45,6 +47,7 @@ export const spawnRunner: Runner = (cmd, args, opts) =>
           GH_NO_UPDATE_NOTIFIER: "1",
           GIT_TERMINAL_PROMPT: "0",
           NO_COLOR: "1",
+          ...opts.env,
         },
       });
     } catch (error) {
@@ -242,7 +245,7 @@ export function assertAllowed(cmd: string, args: string[], pinnedRepo: string | 
     }
     return;
   }
-  const repoFlag = flagValue(args, "--repo") ?? flagValue(args, "-R");
+  const repoFlag = singleFlagValue(args, "--repo", "-R");
   if (repoFlag === null) throw forbidden(`gh ${verb} must be pinned with --repo`);
   if (pinnedRepo !== null && repoFlag.toLowerCase() !== pinnedRepo.toLowerCase()) {
     throw forbidden(`refusing to touch ${repoFlag}: this run is pinned to ${pinnedRepo}`);
@@ -261,6 +264,36 @@ function assertPinnedApiPath(path: string, pinnedRepo: string | null, read: bool
   const owner = pinned.split("/")[0];
   if (read && target === `${owner}/.github`) return;
   throw forbidden(`refusing to touch ${target}: this run is pinned to ${pinnedRepo}`);
+}
+
+/**
+ * The value of a pinning flag, refusing any repeat. gh takes the last value
+ * of a repeated flag, so checking only one occurrence would let
+ * `--repo pinned --repo other` slip past the pin (#46). Matches `--long V`,
+ * `--long=V`, `-S V`, `-S=V` and `-SV`. It scans every argument, even after
+ * `--`, because `--` can be another flag's value (`--search -- --repo other`).
+ * A short-flag cluster with `S` after another letter (`-vSV`, `-dSV`) is
+ * refused outright: whether gh reads `S` as the flag or as part of the
+ * previous flag's value depends on that flag, and cutwater never clusters.
+ * Throws FORBIDDEN on a second occurrence or on such a cluster.
+ */
+export function singleFlagValue(args: string[], long: string, short?: string): string | null {
+  const letter = short?.slice(1);
+  const values: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i] ?? "";
+    if (arg === long) values.push(args[++i] ?? "");
+    else if (arg.startsWith(`${long}=`)) values.push(arg.slice(long.length + 1));
+    else if (letter && arg.length > 1 && arg.startsWith("-") && !arg.startsWith("--")) {
+      const at = arg.indexOf(letter, 1);
+      if (at === -1) continue;
+      if (at > 1) throw forbidden(`${short} may not be combined with other short flags`);
+      const attached = arg.slice(at + 1).replace(/^=/, "");
+      values.push(attached !== "" ? attached : (args[++i] ?? ""));
+    }
+  }
+  if (values.length > 1) throw forbidden(`${long} may be given only once`);
+  return values[0] ?? null;
 }
 
 export function flagValue(args: string[], flag: string): string | null {
@@ -306,7 +339,10 @@ export async function run(
 
   let attempt = 0;
   for (;;) {
-    const result = await ctx.runner(cmd, args, { cwd: ctx.cwd, input: opts.input });
+    // GH_REPO makes the pinned repository gh's fallback too, so a `-R` that gh
+    // reads as another flag's value can never leave it on an ambient repo.
+    const env = cmd === "gh" && ctx.repo !== null ? { GH_REPO: ctx.repo } : undefined;
+    const result = await ctx.runner(cmd, args, { cwd: ctx.cwd, input: opts.input, env });
     log(ctx, { cmd, args, mutating, dryRun: ctx.dryRun, code: result.code, attempt });
     if (result.code === 0) return result;
     if (result.code === 127) {

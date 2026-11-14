@@ -301,7 +301,8 @@ var spawnRunner = (cmd, args, opts) => new Promise((resolve2) => {
         GH_PROMPT_DISABLED: "1",
         GH_NO_UPDATE_NOTIFIER: "1",
         GIT_TERMINAL_PROMPT: "0",
-        NO_COLOR: "1"
+        NO_COLOR: "1",
+        ...opts.env
       }
     });
   } catch (error) {
@@ -453,7 +454,7 @@ function assertAllowed(cmd, args, pinnedRepo) {
     }
     return;
   }
-  const repoFlag = flagValue(args, "--repo") ?? flagValue(args, "-R");
+  const repoFlag = singleFlagValue(args, "--repo", "-R");
   if (repoFlag === null) throw forbidden(`gh ${verb} must be pinned with --repo`);
   if (pinnedRepo !== null && repoFlag.toLowerCase() !== pinnedRepo.toLowerCase()) {
     throw forbidden(`refusing to touch ${repoFlag}: this run is pinned to ${pinnedRepo}`);
@@ -470,13 +471,23 @@ function assertPinnedApiPath(path, pinnedRepo, read) {
   if (read && target === `${owner}/.github`) return;
   throw forbidden(`refusing to touch ${target}: this run is pinned to ${pinnedRepo}`);
 }
-function flagValue(args, flag) {
+function singleFlagValue(args, long, short) {
+  const letter = short?.slice(1);
+  const values = [];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i] ?? "";
-    if (arg === flag) return args[i + 1] ?? null;
-    if (arg.startsWith(`${flag}=`)) return arg.slice(flag.length + 1);
+    if (arg === long) values.push(args[++i] ?? "");
+    else if (arg.startsWith(`${long}=`)) values.push(arg.slice(long.length + 1));
+    else if (letter && arg.length > 1 && arg.startsWith("-") && !arg.startsWith("--")) {
+      const at = arg.indexOf(letter, 1);
+      if (at === -1) continue;
+      if (at > 1) throw forbidden(`${short} may not be combined with other short flags`);
+      const attached = arg.slice(at + 1).replace(/^=/, "");
+      values.push(attached !== "" ? attached : args[++i] ?? "");
+    }
   }
-  return null;
+  if (values.length > 1) throw forbidden(`${long} may be given only once`);
+  return values[0] ?? null;
 }
 function log(ctx, entry) {
   if (!ctx.logFile) return;
@@ -497,7 +508,8 @@ async function run(ctx, cmd, args, opts = {}) {
   }
   let attempt = 0;
   for (; ; ) {
-    const result = await ctx.runner(cmd, args, { cwd: ctx.cwd, input: opts.input });
+    const env = cmd === "gh" && ctx.repo !== null ? { GH_REPO: ctx.repo } : void 0;
+    const result = await ctx.runner(cmd, args, { cwd: ctx.cwd, input: opts.input, env });
     log(ctx, { cmd, args, mutating, dryRun: ctx.dryRun, code: result.code, attempt });
     if (result.code === 0) return result;
     if (result.code === 127) {

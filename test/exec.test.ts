@@ -37,6 +37,40 @@ test("requires --repo pinning and refuses other repositories", () => {
   forbidden(() => assertAllowed("gh", ["repo", "view", "evil/other"], "o/r"));
 });
 
+// gh uses the last value of a repeated flag, so any repeat must be refused (#46).
+test("refuses a repeated --repo in every spelling (security)", () => {
+  const issue = ["label", "create", "x"];
+  for (const extra of [
+    ["--repo", "evil/other"],
+    ["--repo=evil/other"],
+    ["-R", "evil/other"],
+    ["-Revil/other"],
+    ["-R=evil/other"],
+    ["--repo", "o/r"],
+  ]) {
+    forbidden(() => assertAllowed("gh", [...issue, "--repo", "o/r", ...extra], "o/r"));
+  }
+  forbidden(() => assertAllowed("gh", [...issue, "-R", "o/r", "--repo=evil/other"], "o/r"));
+  // A flag value of `--` does not end gh's flags (verified on gh 2.100.0).
+  forbidden(() =>
+    assertAllowed(
+      "gh",
+      [...issue, "--repo", "o/r", "--description", "--", "--repo", "evil/other"],
+      "o/r",
+    ),
+  );
+  // gh reads `R` inside a short-flag cluster (`-vRx` = `-v -R x`, verified).
+  forbidden(() => assertAllowed("gh", [...issue, "--repo", "o/r", "-fRevil/other"], "o/r"));
+  forbidden(() => assertAllowed("gh", [...issue, "--repo", "o/r", "-fR", "evil/other"], "o/r"));
+  forbidden(() => assertAllowed("gh", [...issue, "-fRevil/other"], "o/r"));
+  // -d takes a value, so gh reads `Ro/r` as the description, not as -R (#47).
+  forbidden(() => assertAllowed("gh", [...issue, "-dRo/r"], "o/r"));
+  forbidden(() => assertAllowed("gh", [...issue, "-fRo/r"], "o/r"));
+  assertAllowed("gh", [...issue, "-R", "o/r"], "o/r");
+  assertAllowed("gh", [...issue, "--repo=o/r"], "o/r");
+  assertAllowed("gh", [...issue, "-Ro/r"], "o/r");
+});
+
 test("allows only the org .github repository as a cross-repo read", () => {
   assertAllowed("gh", ["api", "repos/o/.github/contents/SECURITY.md"], "o/r");
   forbidden(() =>
@@ -98,4 +132,17 @@ test("does not retry permanent failures", async () => {
   const ctx = testContext({ runner, repo: "o/r" });
   await assert.rejects(gh(ctx, ["label", "list", "--repo", "o/r"]));
   assert.equal(attempts, 1);
+});
+
+test("passes the pinned repository to gh as GH_REPO (security)", async () => {
+  const seen: (Record<string, string> | undefined)[] = [];
+  const ctx = testContext({
+    repo: "o/r",
+    runner: async (_cmd, _args, opts) => {
+      seen.push(opts.env);
+      return { code: 0, stdout: "", stderr: "" };
+    },
+  });
+  await gh(ctx, ["label", "list", "--repo", "o/r"]);
+  assert.deepEqual(seen, [{ GH_REPO: "o/r" }]);
 });
