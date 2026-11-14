@@ -352,8 +352,61 @@ var GH_READ = /* @__PURE__ */ new Set([
   "pr checks",
   "run view"
 ]);
-var PROJECT_READ = /* @__PURE__ */ new Set(["list", "view", "field-list", "item-list"]);
-var PROJECT_WRITE = /* @__PURE__ */ new Set(["create", "link", "field-create", "item-add", "item-edit"]);
+var OUTPUT = { "--format": true, "--jq": true, "--template": true };
+var PROJECT_SHORT = {
+  "-q": "--jq",
+  "-t": "--template",
+  "-L": "--limit",
+  "-R": "--repo"
+};
+var PROJECT_VERBS = {
+  list: {
+    write: false,
+    number: false,
+    flags: { ...OUTPUT, "--owner": true, "--closed": false, "--limit": true }
+  },
+  view: { write: false, number: true, flags: { ...OUTPUT, "--owner": true } },
+  "field-list": {
+    write: false,
+    number: true,
+    flags: { ...OUTPUT, "--owner": true, "--limit": true }
+  },
+  "item-list": {
+    write: false,
+    number: true,
+    flags: { ...OUTPUT, "--owner": true, "--limit": true, "--query": true }
+  },
+  create: { write: true, number: false, flags: { ...OUTPUT, "--owner": true, "--title": true } },
+  link: { write: true, number: true, flags: { "--owner": true, "--repo": true } },
+  "field-create": {
+    write: true,
+    number: true,
+    flags: {
+      ...OUTPUT,
+      "--owner": true,
+      "--name": true,
+      "--data-type": true,
+      "--single-select-options": true
+    }
+  },
+  "item-add": { write: true, number: true, flags: { ...OUTPUT, "--owner": true, "--url": true } },
+  "item-edit": {
+    write: true,
+    number: false,
+    flags: {
+      ...OUTPUT,
+      "--id": true,
+      "--project-id": true,
+      "--field-id": true,
+      "--text": true,
+      "--number": true,
+      "--date": true,
+      "--single-select-option-id": true,
+      "--iteration-id": true,
+      "--clear": false
+    }
+  }
+};
 var PROJECT_FORBIDDEN = /* @__PURE__ */ new Set([
   "delete",
   "close",
@@ -416,7 +469,7 @@ function isMutating(cmd, args) {
   if (cmd !== "gh") return false;
   const verb = `${args[0] ?? ""} ${args[1] ?? ""}`;
   if (GH_WRITE.has(verb)) return true;
-  if (args[0] === "project") return PROJECT_WRITE.has(args[1] ?? "");
+  if (args[0] === "project") return PROJECT_VERBS[args[1] ?? ""]?.write ?? false;
   if (args[0] === "api") return parseApiArgs(args).method !== "GET";
   return false;
 }
@@ -479,20 +532,49 @@ function assertAllowed(cmd, args, pinnedRepo, scope = {}) {
     throw forbidden(`refusing to touch ${repoFlag}: this run is pinned to ${pinnedRepo}`);
   }
 }
+function parseProjectArgs(verb, args) {
+  const spec = PROJECT_VERBS[verb];
+  if (!spec) throw forbidden(`gh project ${verb} is not on cutwater's allowlist`);
+  const values = /* @__PURE__ */ new Map();
+  let positionals = 0;
+  for (let i = 2; i < args.length; i++) {
+    const arg = args[i] ?? "";
+    if (arg === "--") throw forbidden(`gh project ${verb} does not accept --`);
+    if (!arg.startsWith("-")) {
+      if (!spec.number || positionals > 0 || !/^\d+$/.test(arg)) {
+        throw forbidden(`gh project ${verb}: unexpected argument ${arg}`);
+      }
+      positionals++;
+      continue;
+    }
+    const eq = arg.startsWith("--") ? arg.indexOf("=") : -1;
+    const raw = eq === -1 ? arg : arg.slice(0, eq);
+    const name = PROJECT_SHORT[raw] ?? raw;
+    if (!(name in spec.flags)) throw forbidden(`gh project ${verb} does not allow ${raw}`);
+    if (values.has(name)) throw forbidden(`${name} may be given only once`);
+    let value = "";
+    if (spec.flags[name]) {
+      value = eq === -1 ? args[++i] ?? "" : arg.slice(eq + 1);
+      if (value === "" || value.startsWith("-")) {
+        throw forbidden(`gh project ${verb}: ${name} needs a value that does not start with -`);
+      }
+    } else if (eq !== -1) {
+      throw forbidden(`gh project ${verb}: ${name} takes no value`);
+    }
+    values.set(name, value);
+  }
+  return values;
+}
 function assertProjectCall(args, pinnedRepo, scope) {
   const verb = args[1] ?? "";
   if (PROJECT_FORBIDDEN.has(verb)) throw forbidden(`gh project ${verb} is never run by cutwater`);
-  if (!PROJECT_READ.has(verb) && !PROJECT_WRITE.has(verb)) {
-    throw forbidden(`gh project ${verb} is not on cutwater's allowlist`);
-  }
+  const flags = parseProjectArgs(verb, args);
   if (pinnedRepo === null) throw forbidden(`gh project ${verb} needs a pinned repository`);
   const pinnedOwner = (pinnedRepo.split("/")[0] ?? "").toLowerCase();
   if (verb === "item-edit") {
-    if (singleFlagValue(args, "--owner") !== null) {
-      throw forbidden("gh project item-edit does not take --owner");
-    }
-    const projectId = singleFlagValue(args, "--project-id");
-    if (projectId === null) throw forbidden("gh project item-edit must pass --project-id");
+    const projectId = flags.get("--project-id");
+    if (projectId === void 0) throw forbidden("gh project item-edit must pass --project-id");
+    if (!flags.has("--id")) throw forbidden("gh project item-edit must pass --id");
     if (!scope.projectIds?.has(projectId)) {
       throw forbidden(
         `refusing to edit items of project ${projectId}: it is not verified as ${pinnedOwner}'s`
@@ -500,14 +582,14 @@ function assertProjectCall(args, pinnedRepo, scope) {
     }
     return;
   }
-  const owner = singleFlagValue(args, "--owner");
-  if (owner === null) throw forbidden(`gh project ${verb} must be pinned with --owner`);
+  const owner = flags.get("--owner");
+  if (owner === void 0) throw forbidden(`gh project ${verb} must be pinned with --owner`);
   const resolved = owner === "@me" ? scope.viewer ?? null : owner;
   if (resolved === null || resolved.toLowerCase() !== pinnedOwner) {
     throw forbidden(`refusing to touch projects of ${owner}: this run is pinned to ${pinnedRepo}`);
   }
   if (verb === "item-add") {
-    const url = singleFlagValue(args, "--url");
+    const url = flags.get("--url") ?? null;
     const match = url === null ? null : /^https:\/\/github\.com\/([^/]+\/[^/]+)\/(issues|pull)\/\d+$/.exec(url);
     if (match?.[1]?.toLowerCase() !== pinnedRepo.toLowerCase()) {
       throw forbidden(
@@ -516,7 +598,7 @@ function assertProjectCall(args, pinnedRepo, scope) {
     }
   }
   if (verb === "link") {
-    const repo = singleFlagValue(args, "--repo", "-R");
+    const repo = flags.get("--repo") ?? null;
     if (repo === null || repo.toLowerCase() !== pinnedRepo.toLowerCase()) {
       throw forbidden(
         `refusing to link ${repo ?? "no repository"}: this run is pinned to ${pinnedRepo}`

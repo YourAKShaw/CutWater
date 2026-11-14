@@ -138,12 +138,12 @@ test("does not retry permanent failures", async () => {
 // gh project takes --owner, not --repo, so it has its own pin (#8). This is the
 // boundary that stops an injected agent from editing someone else's board.
 test("pins gh project reads and writes to the repository owner (security)", () => {
-  for (const verb of ["list", "view", "field-list", "item-list"]) {
+  assertAllowed("gh", ["project", "list", "--owner", "O", "--format", "json"], "o/r");
+  for (const verb of ["view", "field-list", "item-list"]) {
     assertAllowed("gh", ["project", verb, "1", "--owner", "O", "--format", "json"], "o/r");
   }
-  for (const verb of ["create", "field-create"]) {
-    assertAllowed("gh", ["project", verb, "1", "--owner=o"], "o/r");
-  }
+  assertAllowed("gh", ["project", "create", "--owner=o", "--title", "Board"], "o/r");
+  assertAllowed("gh", ["project", "field-create", "1", "--owner=o", "--name", "P"], "o/r");
   forbidden(() => assertAllowed("gh", ["project", "view", "1"], "o/r"));
   forbidden(() => assertAllowed("gh", ["project", "view", "1", "--owner", "evil"], "o/r"));
   forbidden(() =>
@@ -257,4 +257,41 @@ test("passes the pinned repository to gh as GH_REPO (security)", async () => {
   });
   await gh(ctx, ["label", "list", "--repo", "o/r"]);
   assert.deepEqual(seen, [{ GH_REPO: "o/r" }]);
+});
+
+// gh must read the same arguments as the pin check, or --owner can hide (#48).
+test("parses gh project arguments strictly, so --owner cannot hide (security)", () => {
+  const pinned = { viewer: "O" };
+  // After `--`, gh treats --owner as a positional and falls back to @me.
+  forbidden(() => assertAllowed("gh", ["project", "list", "--", "--owner", "o"], "o/r", pinned));
+  // gh takes the token after a value flag as its value: title "--owner", owner empty.
+  forbidden(() =>
+    assertAllowed("gh", ["project", "create", "--title", "--owner", "o"], "o/r", pinned),
+  );
+  forbidden(() => assertAllowed("gh", ["project", "view", "1", "--owner", "o", "--web"], "o/r"));
+  forbidden(() => assertAllowed("gh", ["project", "view", "1", "--owner", "o", "-L30"], "o/r"));
+  forbidden(() => assertAllowed("gh", ["project", "view", "1", "2", "--owner", "o"], "o/r"));
+  forbidden(() => assertAllowed("gh", ["project", "list", "1", "--owner", "o"], "o/r"));
+  forbidden(() => assertAllowed("gh", ["project", "list", "--owner", "o", "--closed=x"], "o/r"));
+  assertAllowed("gh", ["project", "list", "--owner", "o", "--closed", "-L", "5"], "o/r");
+});
+
+test("item-edit refuses by-name and draft edits, which bypass the project id (security)", () => {
+  const base = ["project", "item-edit", "--id", "PVTI_1", "--project-id", "PVT_ok"];
+  const projectIds = new Set(["PVT_ok"]);
+  assertAllowed("gh", [...base, "--field-id", "F", "--text", "x"], "o/r", { projectIds });
+  assertAllowed("gh", [...base, "--field-id", "F", "--clear"], "o/r", { projectIds });
+  for (const extra of [
+    ["--title", "x"],
+    ["--body=x"],
+    ["--owner", "o"],
+    ["--url", "https://github.com/o/r/issues/1"],
+    ["--field", "Status", "--value", "Done"],
+    ["1"],
+  ]) {
+    forbidden(() => assertAllowed("gh", [...base, ...extra], "o/r", { projectIds }));
+  }
+  forbidden(() =>
+    assertAllowed("gh", ["project", "item-edit", "--project-id", "PVT_ok"], "o/r", { projectIds }),
+  );
 });
