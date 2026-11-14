@@ -535,14 +535,17 @@ function assertPinnedApiPath(path, pinnedRepo, read) {
   throw forbidden(`refusing to touch ${target}: this run is pinned to ${pinnedRepo}`);
 }
 function singleFlagValue(args, long, short) {
+  const letter = short?.slice(1);
   const values = [];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i] ?? "";
-    if (arg === "--") break;
-    if (arg === long || short !== void 0 && arg === short) values.push(args[++i] ?? "");
+    if (arg === long) values.push(args[++i] ?? "");
     else if (arg.startsWith(`${long}=`)) values.push(arg.slice(long.length + 1));
-    else if (short !== void 0 && arg.startsWith(short) && !arg.startsWith("--")) {
-      values.push(arg.slice(short.length).replace(/^=/, ""));
+    else if (letter && arg.length > 1 && arg.startsWith("-") && !arg.startsWith("--")) {
+      const at = arg.indexOf(letter, 1);
+      if (at === -1) continue;
+      const attached = arg.slice(at + 1).replace(/^=/, "");
+      values.push(attached !== "" ? attached : args[++i] ?? "");
     }
   }
   if (values.length > 1) throw forbidden(`${long} may be given only once`);

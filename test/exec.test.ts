@@ -52,6 +52,19 @@ test("refuses a repeated --repo in every spelling (security)", () => {
     forbidden(() => assertAllowed("gh", [...issue, "--repo", "o/r", ...extra], "o/r"));
   }
   forbidden(() => assertAllowed("gh", [...issue, "-R", "o/r", "--repo=evil/other"], "o/r"));
+  // A flag value of `--` does not end gh's flags (verified on gh 2.100.0).
+  forbidden(() =>
+    assertAllowed(
+      "gh",
+      [...issue, "--repo", "o/r", "--description", "--", "--repo", "evil/other"],
+      "o/r",
+    ),
+  );
+  // gh reads `R` inside a short-flag cluster (`-vRx` = `-v -R x`, verified).
+  forbidden(() => assertAllowed("gh", [...issue, "--repo", "o/r", "-fRevil/other"], "o/r"));
+  forbidden(() => assertAllowed("gh", [...issue, "--repo", "o/r", "-fR", "evil/other"], "o/r"));
+  forbidden(() => assertAllowed("gh", [...issue, "-fRevil/other"], "o/r"));
+  assertAllowed("gh", [...issue, "-fRo/r"], "o/r");
   assertAllowed("gh", [...issue, "-R", "o/r"], "o/r");
   assertAllowed("gh", [...issue, "--repo=o/r"], "o/r");
   assertAllowed("gh", [...issue, "-Ro/r"], "o/r");
