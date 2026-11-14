@@ -9,3 +9,4 @@ package-lock.json
 skills/cutwater/scripts/cutwater.mjs
 skills/cutwater/assets/
 sandbox/fixtures/
+test/fixtures/coderabbit/
