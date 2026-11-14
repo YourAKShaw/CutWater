@@ -10,3 +10,6 @@ skills/cutwater/scripts/cutwater.mjs
 skills/cutwater/assets/
 sandbox/fixtures/
 test/fixtures/coderabbit/
+
+# Byte-exact manifest fixtures (serialised by the helper).
+test/fixtures/manifest/

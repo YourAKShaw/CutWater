@@ -10,16 +10,53 @@
 import { join } from "node:path";
 import type { Answers } from "./answers.ts";
 import { readText } from "./fsutil.ts";
-import { MANIFEST_PATH, MANIFEST_SCHEMA_URL, SCHEMA_VERSION } from "../version.ts";
+import { MANIFEST_PATH, MANIFEST_SCHEMA_URL, SCHEMA_VERSIONS } from "../version.ts";
 
 export interface ManifestFile {
   template: string;
   sha256: string;
 }
 
+/** Projects as chosen in the interview (v2). */
+export interface ProjectChoice {
+  enabled: boolean;
+  mode: "create" | "adopt";
+  title: string;
+  fields: string[];
+  seed: boolean;
+}
+
+export const STATUS_OPTIONS = ["todo", "inProgress", "inReview", "blocked", "done"] as const;
+export const PRIORITY_OPTIONS = ["p0", "p1", "p2", "p3"] as const;
+
+export interface ManifestProjectField<K extends string> {
+  id: string;
+  options: Record<K, string>;
+}
+
+/**
+ * The Project as applied (v2). Node ids are recorded only after they were
+ * verified live on the Project (invariant I8); the number is for humans and
+ * gh commands, the id for GraphQL item edits. Item ids are never stored.
+ */
+export interface ManifestProject {
+  owner: string;
+  ownerType: "user" | "organization";
+  number: number;
+  id: string;
+  title: string;
+  url: string;
+  linked: boolean;
+  adopted: boolean;
+  fields: {
+    status: ManifestProjectField<(typeof STATUS_OPTIONS)[number]>;
+    priority: ManifestProjectField<(typeof PRIORITY_OPTIONS)[number]>;
+  };
+}
+
 export interface Manifest {
   $schema?: string;
-  schemaVersion: number;
+  schemaVersion: 1 | 2;
   skillVersion: string;
   createdAt: string;
   updatedAt: string;
@@ -32,7 +69,10 @@ export interface Manifest {
     ci: string[];
     dependencyBot: string;
     wiki: boolean;
-    projectsBoard: string | null;
+    /** v1 only; deprecated, still read. Use migrateProjectChoice. */
+    projectsBoard?: string | null;
+    /** v2 only. */
+    project?: ProjectChoice;
     ruleset: boolean;
     coderabbit?: string;
     emojiLabels?: boolean;
@@ -47,6 +87,8 @@ export interface Manifest {
     labels: string[];
     rulesetId?: number | null;
   };
+  /** v2 only. */
+  project?: ManifestProject;
 }
 
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
@@ -58,6 +100,7 @@ const CHOICE_KEYS = new Set([
   "dependencyBot",
   "wiki",
   "projectsBoard",
+  "project",
   "ruleset",
   "coderabbit",
   "emojiLabels",
@@ -86,11 +129,17 @@ export function validateManifest(value: unknown): string[] {
     "defaultBranch",
     "choices",
     "applied",
+    "project",
   ]);
   for (const key of Object.keys(value))
     if (!allowed.has(key)) errors.push(`unknown property "${key}"`);
-  if (value.schemaVersion !== SCHEMA_VERSION)
-    errors.push(`schemaVersion must be ${SCHEMA_VERSION}`);
+  if (!SCHEMA_VERSIONS.includes(value.schemaVersion as number))
+    errors.push(`schemaVersion must be one of ${SCHEMA_VERSIONS.join(", ")}`);
+  const v2 = value.schemaVersion === 2;
+  if ("project" in value) {
+    if (!v2) errors.push("project needs schemaVersion 2");
+    errors.push(...validateProject(value.project));
+  }
   if (
     typeof value.skillVersion !== "string" ||
     !/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(value.skillVersion)
@@ -135,10 +184,16 @@ export function validateManifest(value: unknown): string[] {
         errors.push(`choices.${key} must be boolean`);
     }
     if (
-      !("projectsBoard" in choices) ||
-      (choices.projectsBoard !== null && typeof choices.projectsBoard !== "string")
+      (!v2 && !("projectsBoard" in choices)) ||
+      ("projectsBoard" in choices &&
+        choices.projectsBoard !== null &&
+        typeof choices.projectsBoard !== "string")
     ) {
       errors.push("choices.projectsBoard must be a string or null");
+    }
+    if ("project" in choices) {
+      if (!v2) errors.push("choices.project needs schemaVersion 2");
+      errors.push(...validateProjectChoice(choices.project));
     }
   }
 
@@ -177,6 +232,103 @@ export function validateManifest(value: unknown): string[] {
     }
   }
   return errors;
+}
+
+function validateProjectChoice(value: unknown): string[] {
+  if (!isObject(value)) return ["choices.project must be an object"];
+  const errors: string[] = [];
+  for (const key of Object.keys(value)) {
+    if (!["enabled", "mode", "title", "fields", "seed"].includes(key))
+      errors.push(`unknown choices.project property "${key}"`);
+  }
+  for (const key of ["enabled", "seed"])
+    if (typeof value[key] !== "boolean") errors.push(`choices.project.${key} must be boolean`);
+  if (value.mode !== "create" && value.mode !== "adopt")
+    errors.push("choices.project.mode must be create or adopt");
+  if (typeof value.title !== "string") errors.push("choices.project.title must be a string");
+  if (
+    !Array.isArray(value.fields) ||
+    !value.fields.every((field) => typeof field === "string") ||
+    new Set(value.fields).size !== value.fields.length
+  ) {
+    errors.push("choices.project.fields must be a list of distinct names");
+  }
+  return errors;
+}
+
+function validateField(name: string, value: unknown, options: readonly string[]): string[] {
+  const at = `project.fields.${name}`;
+  if (!isObject(value)) return [`${at} must be an object`];
+  const errors: string[] = [];
+  for (const key of Object.keys(value))
+    if (key !== "id" && key !== "options") errors.push(`unknown ${at} property "${key}"`);
+  if (typeof value.id !== "string" || value.id === "") errors.push(`${at}.id must be a node id`);
+  const opts = value.options;
+  if (!isObject(opts)) return [...errors, `${at}.options must be an object`];
+  for (const key of Object.keys(opts))
+    if (!options.includes(key)) errors.push(`unknown ${at} option "${key}"`);
+  for (const key of options)
+    if (typeof opts[key] !== "string" || opts[key] === "")
+      errors.push(`${at}.options.${key} must be an option id`);
+  return errors;
+}
+
+function validateProject(value: unknown): string[] {
+  if (!isObject(value)) return ["project must be an object"];
+  const errors: string[] = [];
+  const keys = [
+    "owner",
+    "ownerType",
+    "number",
+    "id",
+    "title",
+    "url",
+    "linked",
+    "adopted",
+    "fields",
+  ];
+  for (const key of Object.keys(value))
+    if (!keys.includes(key)) errors.push(`unknown project property "${key}"`);
+  if (typeof value.owner !== "string" || !/^[A-Za-z0-9-]+$/.test(value.owner))
+    errors.push("project.owner must be a login");
+  if (value.ownerType !== "user" && value.ownerType !== "organization")
+    errors.push("project.ownerType must be user or organization");
+  if (!Number.isInteger(value.number) || (value.number as number) < 1)
+    errors.push("project.number must be a positive integer");
+  for (const key of ["id", "title"])
+    if (typeof value[key] !== "string" || value[key] === "")
+      errors.push(`project.${key} must be a non-empty string`);
+  if (typeof value.url !== "string" || !value.url.startsWith("https://github.com/"))
+    errors.push("project.url must be a github.com URL");
+  for (const key of ["linked", "adopted"])
+    if (typeof value[key] !== "boolean") errors.push(`project.${key} must be boolean`);
+  const fields = value.fields;
+  if (!isObject(fields)) errors.push("project.fields must be an object");
+  else {
+    for (const key of Object.keys(fields))
+      if (key !== "status" && key !== "priority") errors.push(`unknown project field "${key}"`);
+    errors.push(...validateField("status", fields.status, STATUS_OPTIONS));
+    errors.push(...validateField("priority", fields.priority, PRIORITY_OPTIONS));
+  }
+  return errors;
+}
+
+/**
+ * The Project choice in v2 shape, from either version. The v1
+ * `projectsBoard` string was a board title that nothing ever filled.
+ */
+export function migrateProjectChoice(choices: Manifest["choices"]): ProjectChoice | null {
+  if (choices.project) return choices.project;
+  if (typeof choices.projectsBoard === "string" && choices.projectsBoard !== "") {
+    return {
+      enabled: true,
+      mode: "create",
+      title: choices.projectsBoard,
+      fields: ["status", "priority"],
+      seed: false,
+    };
+  }
+  return null;
 }
 
 export interface ManifestRead {
@@ -227,6 +379,11 @@ export function choicesFrom(answers: Answers): Manifest["choices"] {
 
 export interface BuildManifestInput {
   previous: Manifest | null;
+  /**
+   * The Project verified live in this run. Setting it (or a v2 previous
+   * manifest) makes the manifest v2; otherwise it stays v1, byte for byte.
+   */
+  project?: ManifestProject;
   answers: Answers;
   skillVersion: string;
   files: Record<string, ManifestFile>;
@@ -239,20 +396,33 @@ export function buildManifest(input: BuildManifestInput): { manifest: Manifest; 
   const sortedFiles = Object.fromEntries(
     Object.entries(input.files).sort(([a], [b]) => a.localeCompare(b)),
   );
+  const project = input.project ?? input.previous?.project;
+  const v2 = project !== undefined || input.previous?.schemaVersion === 2;
+  const choices = choicesFrom(input.answers);
+  if (v2) {
+    // v2 records the Project choice in its own shape and drops the v1 field.
+    const choice = migrateProjectChoice({
+      ...choices,
+      ...(input.previous?.choices.project ? { project: input.previous.choices.project } : {}),
+    });
+    delete choices.projectsBoard;
+    if (choice) choices.project = choice;
+  }
   const next: Manifest = {
     $schema: MANIFEST_SCHEMA_URL,
-    schemaVersion: SCHEMA_VERSION,
+    schemaVersion: v2 ? 2 : 1,
     skillVersion: input.skillVersion,
     createdAt: input.previous?.createdAt ?? input.now,
     updatedAt: input.previous?.updatedAt ?? input.now,
     repo: input.answers.repo,
     defaultBranch: input.answers.defaultBranch,
-    choices: choicesFrom(input.answers),
+    choices,
     applied: {
       files: sortedFiles,
       labels: [...input.labels].sort((a, b) => a.localeCompare(b)),
       rulesetId: input.previous?.applied.rulesetId ?? null,
     },
+    ...(project ? { project } : {}),
   };
   const changed =
     input.previous === null ||

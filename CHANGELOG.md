@@ -6,6 +6,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
+- Manifest schema v2 records the GitHub Project (`project` with verified node ids, and `choices.project`). v1 manifests stay readable and byte-identical until a Project is applied; the deprecated `choices.projectsBoard` is migrated on read, and `manifest validate` reports the version ([#10](https://github.com/YourAKShaw/CutWater/issues/10)).
 - `cw preflight --needs project` checks the token's Projects access only when Projects are chosen: a missing or read-only scope exits 3 with `gh auth refresh -s project`, a fine-grained token gets one read probe, and org repositories get a policy note. Projects scope errors from gh get a tailored fix ([#9](https://github.com/YourAKShaw/CutWater/issues/9)).
 - `references/coderabbit.md` walks users through CodeRabbit setup (app install, a seat for bot authors, re-review commands, stale change requests, optional CLI), and `cw plan` points to it when CodeRabbit is chosen ([#54](https://github.com/YourAKShaw/CutWater/issues/54)).
 - Phase 0 can scaffold an optional `.coderabbit.yaml` (interview answer `coderabbit`: `off`, `quiet`, `chill` or `assertive`; default `off`). It has stack-aware `path_instructions`, workflow-security review guidance and a short `tone_instructions`. Audit item A17 checks it only when it was chosen ([#52](https://github.com/YourAKShaw/CutWater/issues/52)).

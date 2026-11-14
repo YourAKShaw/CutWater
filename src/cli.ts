@@ -420,13 +420,14 @@ async function cmdManifest(env: Env, sub: string | undefined): Promise<number> {
       path: MANIFEST_PATH,
       exists: read.exists,
       valid: read.manifest !== null,
+      schemaVersion: read.manifest?.schemaVersion ?? null,
       errors: read.errors,
     };
     print(env.out, result, () =>
       !read.exists
         ? `❌ ${MANIFEST_PATH} not found`
         : read.manifest
-          ? `✅ ${MANIFEST_PATH} is valid`
+          ? `✅ ${MANIFEST_PATH} is valid (schema v${read.manifest.schemaVersion})`
           : `❌ ${MANIFEST_PATH} is invalid:\n  ${read.errors.join("\n  ")}`,
     );
     return read.manifest ? EXIT.OK : EXIT.ERROR;

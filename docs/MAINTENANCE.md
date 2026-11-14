@@ -28,7 +28,7 @@ Changing an asset changes its hash, so repositories set up earlier will see that
 
 ## Changing the manifest schema
 
-Schema changes are breaking. Bump `SCHEMA_VERSION` in `src/version.ts`, the `schemaVersion` const in the schema, and the major version of the skill (minor while pre-1.0), and teach `readManifest` to migrate or explain older versions.
+Schema changes are breaking. Bump `SCHEMA_VERSION` (and `SCHEMA_VERSIONS`) in `src/version.ts`, the `schemaVersion` enum in the schema, and the major version of the skill (minor while pre-1.0), and teach `readManifest` to migrate or explain older versions. Keep the writer on the oldest version that can hold the content, so a no-op run leaves an older manifest byte-identical (v1 stays v1 until a Project is applied). The byte-exact fixtures in `test/fixtures/manifest/` must keep passing.
 
 ## Before a release
 

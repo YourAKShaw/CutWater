@@ -1,0 +1,39 @@
+{
+  "$schema": "https://raw.githubusercontent.com/YourAKShaw/CutWater/main/skills/cutwater/assets/manifest.schema.json",
+  "schemaVersion": 1,
+  "skillVersion": "0.1.0",
+  "createdAt": "2026-11-10T00:00:00Z",
+  "updatedAt": "2026-11-10T00:00:00Z",
+  "repo": "octocat/demo",
+  "defaultBranch": "main",
+  "choices": {
+    "visibility": "private",
+    "stack": "generic",
+    "license": "MIT",
+    "ci": [
+      "lint"
+    ],
+    "dependencyBot": "dependabot",
+    "wiki": false,
+    "projectsBoard": null,
+    "ruleset": true,
+    "emojiLabels": false,
+    "acceptOrgDefaults": false,
+    "copyrightYear": "2026",
+    "copyrightHolder": "octocat",
+    "maintainer": "octocat",
+    "securityContact": "octocat"
+  },
+  "applied": {
+    "files": {
+      "SECURITY.md": {
+        "template": "community/SECURITY.md",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "labels": [
+      "type: feat"
+    ],
+    "rulesetId": null
+  }
+}
