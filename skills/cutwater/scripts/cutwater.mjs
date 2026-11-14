@@ -860,9 +860,19 @@ var CI_OPTIONS = ["lint", "test", "build", "release"];
 var VISIBILITIES = ["private", "public", "internal"];
 var DEPENDENCY_BOTS = ["dependabot", "renovate", "none"];
 var CODERABBIT_PROFILES = ["off", "quiet", "chill", "assertive"];
+var PROJECT_FIELDS = ["status", "priority", "size", "target-date"];
+var PROJECT_TITLE_MAX = 100;
 function defaultAnswers(input) {
   const { detection } = input;
   const repo = input.repo ?? `${input.login}/${detection.name.replace(/[^A-Za-z0-9._-]/g, "-")}`;
+  const linked = input.linkedProjects?.[0];
+  const notes = [];
+  if (linked)
+    notes.push(
+      `Project #${linked.number} "${linked.title}" is already linked to the repository: if Projects are turned on, the default is to adopt it rather than create a new one.`
+    );
+  if (input.projectScopeMissing)
+    notes.push("Projects: 🔒 needs `gh auth refresh -s project` before a board can be set up.");
   return {
     answers: {
       name: detection.name,
@@ -881,6 +891,15 @@ function defaultAnswers(input) {
       dependencyBot: "dependabot",
       wiki: false,
       projectsBoard: null,
+      project: {
+        enabled: false,
+        mode: linked ? "adopt" : "create",
+        ...linked ? { number: linked.number } : {},
+        title: linked?.title ?? `${detection.name} Development`,
+        owner: repo.split("/")[0] ?? input.login,
+        fields: ["status", "priority"],
+        seed: false
+      },
       ruleset: false,
       coderabbit: "off",
       commitMode: !input.remoteExists || input.isEmpty ? "direct" : "pr",
@@ -891,7 +910,8 @@ function defaultAnswers(input) {
     notes: [
       `Detected stack: ${stackProfile(detection.stack, ".").label}${detection.evidence.length > 0 ? ` (${detection.evidence.join(", ")})` : ""}.`,
       "Visibility defaults to private: making a repository public later is easy, exposure is not reversible.",
-      "The ruleset default is to ask: it needs Administration write permission and blocks direct pushes."
+      "The ruleset default is to ask: it needs Administration write permission and blocks direct pushes.",
+      ...notes
     ]
   };
 }
@@ -949,15 +969,64 @@ function validateAnswers(input) {
   }
   for (const key of ["createRepo", "wiki", "ruleset", "emojiLabels", "acceptOrgDefaults"])
     bool(key);
+  if (a.projectsBoard === void 0) a.projectsBoard = null;
   if (a.projectsBoard !== null && typeof a.projectsBoard !== "string") {
     problems.push("projectsBoard must be a string or null");
   }
+  if (a.project === void 0 && typeof a.projectsBoard === "string" && a.projectsBoard !== "") {
+    a.project = {
+      enabled: true,
+      mode: "create",
+      title: a.projectsBoard,
+      owner: typeof a.repo === "string" ? a.repo.split("/")[0] ?? "" : "",
+      fields: ["status", "priority"],
+      seed: false
+    };
+  }
+  if (a.project !== void 0) problems.push(...projectProblems(a.project, a.repo));
   if (problems.length > 0) {
     throw new CutwaterError("VALIDATION", `answers.json is invalid: ${problems.join("; ")}`, {
       problems
     });
   }
   return a;
+}
+function projectProblems(value, repo) {
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    return ["project must be an object"];
+  const p = value;
+  const problems = [];
+  const known = ["enabled", "mode", "number", "title", "owner", "fields", "seed"];
+  for (const key of Object.keys(p))
+    if (!known.includes(key)) problems.push(`project.${key} is not a known field`);
+  for (const key of ["enabled", "seed"])
+    if (typeof p[key] !== "boolean") problems.push(`project.${key} must be true or false`);
+  if (!oneOf(p.mode, ["create", "adopt"]))
+    problems.push('project.mode must be "create" or "adopt"');
+  if (p.number !== void 0 && (!Number.isInteger(p.number) || p.number < 1))
+    problems.push("project.number must be a positive integer");
+  if (p.mode === "adopt" && p.number === void 0)
+    problems.push("project.number is required when project.mode is adopt");
+  if (typeof p.title !== "string" || p.title.trim() === "")
+    problems.push("project.title must not be empty");
+  else if (p.title.length > PROJECT_TITLE_MAX)
+    problems.push(`project.title must be at most ${PROJECT_TITLE_MAX} characters`);
+  if (!Array.isArray(p.fields) || new Set(p.fields).size !== p.fields.length)
+    problems.push("project.fields must be a list of distinct field keys");
+  else
+    for (const field of p.fields)
+      if (!oneOf(field, PROJECT_FIELDS))
+        problems.push(
+          `project.fields: unknown field "${String(field)}" (use ${PROJECT_FIELDS.join(", ")})`
+        );
+  const repoOwner = typeof repo === "string" ? repo.split("/")[0] : void 0;
+  if (typeof p.owner !== "string" || !LOGIN.test(p.owner))
+    problems.push("project.owner must be a GitHub login without @");
+  else if (p.enabled === true && repoOwner !== void 0 && p.owner.toLowerCase() !== repoOwner.toLowerCase())
+    problems.push(
+      `project.owner ${p.owner} differs from the repository owner ${repoOwner}; boards of another owner are out of scope (ADR 0010)`
+    );
+  return problems;
 }
 function templateVars(answers, root) {
   const profile = stackProfile(answers.stack, root);
@@ -1265,7 +1334,14 @@ function buildManifest(input) {
   const v2 = project !== void 0 || input.previous?.schemaVersion === 2;
   const choices = choicesFrom(input.answers);
   if (v2) {
-    const choice = migrateProjectChoice({
+    const fromAnswers = input.answers.project;
+    const choice = fromAnswers ? {
+      enabled: fromAnswers.enabled,
+      mode: fromAnswers.mode,
+      title: fromAnswers.title,
+      fields: [...fromAnswers.fields],
+      seed: fromAnswers.seed
+    } : migrateProjectChoice({
       ...choices,
       ...input.previous?.choices.project ? { project: input.previous.choices.project } : {}
     });
@@ -3252,9 +3328,9 @@ function computePlan(input) {
     notes.push(
       "Wiki chosen: run `wiki-check`; GitHub requires the first wiki page to be created in the web UI."
     );
-  if (answers.projectsBoard)
+  if (answers.project?.enabled)
     notes.push(
-      "Projects board chosen: needs the `project` scope (`gh auth refresh -s project`); set it up by hand for v1."
+      `Projects chosen (${answers.project.mode === "adopt" ? `adopt #${answers.project.number}` : `create "${answers.project.title}"`}): run \`cw preflight --needs project\` first; the board is set up after the setup commit.`
     );
   const fileEntries = entries.filter((entry) => entry.kind === "file");
   const count = (action) => fileEntries.filter((entry) => entry.action === action).length;
@@ -3511,6 +3587,17 @@ async function checkProjects(ctx, auth, repo, info, need, problems) {
   }
   return access;
 }
+async function linkedProjects(ctx, repo) {
+  const result = await gh(ctx, ["repo", "view", repo, "--json", "projectsV2"], {
+    allowFailure: true
+  });
+  if (result.code !== 0) return null;
+  const owner = repo.split("/")[0]?.toLowerCase();
+  const data = JSON.parse(result.stdout);
+  return (data.projectsV2?.Nodes ?? []).filter(
+    (node) => typeof node.number === "number" && typeof node.title === "string" && node.closed !== true && (typeof node.owner?.login !== "string" || node.owner.login.toLowerCase() === owner)
+  ).map((node) => ({ number: node.number, title: node.title }));
+}
 
 // src/cli.ts
 var BOOLEANS = /* @__PURE__ */ new Set([
@@ -3684,7 +3771,16 @@ async function cmdDefaults(env) {
   if (!login) throw new CutwaterError("USAGE", "--offline needs --login");
   const { repo } = await pinned(env, { requireRepo: false });
   const info = !offline && repo ? await repoView(env.ctx, repo) : null;
+  let linked = null;
+  let projectScopeMissing = false;
+  if (info !== null && repo) {
+    const access = projectAccessFromScopes((await authInfo(env.ctx)).scopes);
+    if (access === "none") projectScopeMissing = true;
+    else linked = await linkedProjects(env.ctx, repo);
+  }
   const result = defaultAnswers({
+    linkedProjects: linked,
+    projectScopeMissing,
     detection: detect(env.root),
     login,
     repo,

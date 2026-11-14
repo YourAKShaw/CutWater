@@ -363,3 +363,37 @@ async function checkProjects(
   }
   return access;
 }
+
+/**
+ * Open Projects linked to the repository, owned by the repository owner, or
+ * null when the token cannot read Projects. One `gh repo view` call.
+ */
+export async function linkedProjects(
+  ctx: ExecContext,
+  repo: string,
+): Promise<{ number: number; title: string }[] | null> {
+  const result = await gh(ctx, ["repo", "view", repo, "--json", "projectsV2"], {
+    allowFailure: true,
+  });
+  if (result.code !== 0) return null;
+  const owner = repo.split("/")[0]?.toLowerCase();
+  const data = JSON.parse(result.stdout) as {
+    projectsV2?: {
+      Nodes?: {
+        number?: unknown;
+        title?: unknown;
+        closed?: unknown;
+        owner?: { login?: unknown };
+      }[];
+    };
+  };
+  return (data.projectsV2?.Nodes ?? [])
+    .filter(
+      (node) =>
+        typeof node.number === "number" &&
+        typeof node.title === "string" &&
+        node.closed !== true &&
+        (typeof node.owner?.login !== "string" || node.owner.login.toLowerCase() === owner),
+    )
+    .map((node) => ({ number: node.number as number, title: node.title as string }));
+}

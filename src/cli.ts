@@ -46,6 +46,8 @@ import {
   authInfo,
   gitInfo,
   preflight,
+  linkedProjects,
+  projectAccessFromScopes,
   repoView,
   resolveRepo,
   viewerLogin,
@@ -254,7 +256,17 @@ async function cmdDefaults(env: Env): Promise<number> {
   if (!login) throw new CutwaterError("USAGE", "--offline needs --login");
   const { repo } = await pinned(env, { requireRepo: false });
   const info = !offline && repo ? await repoView(env.ctx, repo) : null;
+  // An existing board counts: propose adopting a Project already linked to the repository.
+  let linked: { number: number; title: string }[] | null = null;
+  let projectScopeMissing = false;
+  if (info !== null && repo) {
+    const access = projectAccessFromScopes((await authInfo(env.ctx)).scopes);
+    if (access === "none") projectScopeMissing = true;
+    else linked = await linkedProjects(env.ctx, repo);
+  }
   const result = defaultAnswers({
+    linkedProjects: linked,
+    projectScopeMissing,
     detection: detect(env.root),
     login,
     repo,
