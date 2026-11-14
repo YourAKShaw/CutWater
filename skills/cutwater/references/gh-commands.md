@@ -62,7 +62,7 @@ Beyond the `gh project` flags:
 
 | Capability | Result | How |
 | :--- | :--- | :--- |
-| Change the built-in `Status` options | **Possible** | GraphQL `updateProjectV2Field(input:{fieldId, singleSelectOptions:[{name, color, description}]})`. It replaces the whole list and **regenerates every option id**, so re-read the ids afterwards |
+| Change the built-in `Status` options | **Possible** | GraphQL `updateProjectV2Field(input:{fieldId, singleSelectOptions:[{id, name, color, description}]})`. It replaces the whole list. Pass each existing option's `id` to keep it: an option sent without an `id` gets a new one (observed), and per the schema, items set to a dropped or re-created option lose their value. Re-read the ids afterwards |
 | `ITERATION` field | **GraphQL only** | `createProjectV2Field(input:{projectId, dataType:ITERATION, name, iterationConfiguration:{startDate, duration, iterations:[]}})` |
 | Create views | **Possible** | REST `POST users/O/projectsV2/P/views` (`orgs/O/…` for organisations) with `name` and `layout` (table, board or roadmap), or GraphQL `createProjectV2View`. A view's configuration accepts only `layout`, `filter` and `visibleFieldIds`: **group-by and sort are web-UI only** |
 | Built-in workflows (auto-add, item closed, PR merged, …) | **Read and delete only** | `ProjectV2.workflows` lists them with `enabled`; the only mutation is `deleteProjectV2Workflow`. Enabling or configuring them is web-UI only. A new Project starts with "Auto-add sub-issues to project" on and the rest off |
