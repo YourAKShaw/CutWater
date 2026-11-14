@@ -42,7 +42,7 @@ Reactions accepted by the REST API: `+1`, `-1`, `laugh`, `confused`, `heart`, `h
 
 ## Projects (V2)
 
-Verified on gh 2.100.0 on 2026-11-14 against a throwaway user-owned Project (#6), with a classic OAuth token. Raw samples: `test/fake-gh/samples/projects/`. Every `gh project` command uses GraphQL and needs `read:project` for reads or `project` for writes. Commands that take a Project number also take `--owner O` (`--owner @me` means the current user); `link` and `unlink` add `--repo O/R`. Commands that act on an id instead take no `--owner`: `field-delete --id FID`, and `item-edit` with `--project-id`. Placeholders: `P` is the Project number, `PID` its node id (`PVT_…`), `FID` a field id, `OID` an option id, `ITEM` an item id (`PVTI_…`).
+Verified on gh 2.100.0 on 2026-11-14 against a throwaway user-owned Project (#6), with a classic OAuth token. Raw samples: `test/fake-gh/samples/projects/`. Every `gh project` command uses GraphQL and needs `read:project` for reads or `project` for writes. Commands that take a Project number also take `--owner O` (`--owner @me` means the current user); `link` and `unlink` add `--repo O/R`. `field-delete --id FID` acts on an id and takes no `--owner`. `item-edit` has two modes: by id (`--id`, `--project-id`, `--field-id`, no `--owner` needed), or by name (`P --owner O --url URL --field NAME --value V`, where `--url` is the issue or PR); `--title` and `--body` edit a draft issue instead. CutWater allows only the id mode (#8). Placeholders: `P` is the Project number, `PID` its node id (`PVT_…`), `FID` a field id, `OID` an option id, `ITEM` an item id (`PVTI_…`).
 
 | Command | JSON shape (`--format json`) | Repeat / idempotency | Errors (exit 1) |
 | :--- | :--- | :--- | :--- |
