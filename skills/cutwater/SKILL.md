@@ -134,6 +134,7 @@ Merging is not a gate: it is **forbidden**.
 
 ## Optional phases
 
+- **CodeRabbit (when chosen):** after scaffolding, give the user the checklist in [coderabbit.md](references/coderabbit.md): app install, a seat for a bot author, re-review commands, stale change requests.
 - **Wiki (on request):** [wiki.md](references/wiki.md). A new wiki cannot be cloned until its first page exists, so `cw wiki-check` hands off to the user.
 - **Status:** `cw status` (read-only).
 - **CI triage, post-merge cleanup, releases, Projects:** [extensions.md](references/extensions.md).

@@ -47,7 +47,7 @@ A repository that has everything but no manifest is *partially* set up. The only
 ## Optional items and org defaults
 
 - The wiki, the Projects board, the ruleset and the CodeRabbit config count only when the manifest says the user chose them.
-- The CodeRabbit config only tunes reviews; it does not install the CodeRabbit GitHub App. Never add CodeRabbit to the ruleset's required checks: it can skip or be rate-limited and would block merges.
+- The CodeRabbit config only tunes reviews; it does not install the CodeRabbit GitHub App. Never add CodeRabbit to the ruleset's required checks: it can skip or be rate-limited and would block merges. After scaffolding, walk the user through the CodeRabbit checklist (`coderabbit.md`, linked from SKILL.md).
 - An organization's `.github` repository can supply default community health files. They show in the GitHub UI but are not part of the repository clone. The audit reports them as 🏢 "provided by org defaults" and lists them in `orgDefaultsPending`.
 - Ask the user: "Your organization's `.github` repository provides SECURITY.md and CODE_OF_CONDUCT.md. Count those as set up, or add repository-specific copies?" If they count, re-run `cw audit --accept-org-defaults` and set `"acceptOrgDefaults": true` in the answers so later audits remember the decision.
 
