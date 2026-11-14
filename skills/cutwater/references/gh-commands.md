@@ -3,6 +3,7 @@
 ## Contents
 
 - [Command table](#command-table)
+- [Projects (V2)](#projects-v2)
 - [Token scopes](#token-scopes)
 - [Manual mode](#manual-mode)
 - [Version notes](#version-notes)
@@ -39,6 +40,39 @@ Placeholders: `O/R` is `owner/name` from preflight, `N` is an issue or PR number
 
 Reactions accepted by the REST API: `+1`, `-1`, `laugh`, `confused`, `heart`, `hooray`, `rocket`, `eyes`.
 
+## Projects (V2)
+
+Verified on gh 2.100.0 on 2026-11-14 against a throwaway user-owned Project (#6), with a classic OAuth token. Raw samples: `test/fake-gh/samples/projects/`. Every `gh project` command uses GraphQL, takes `--owner O` (not `--repo`) and needs the `project` scope; `--owner @me` means the current user. Placeholders: `P` is the Project number, `PID` its node id (`PVT_…`), `FID` a field id, `OID` an option id, `ITEM` an item id (`PVTI_…`).
+
+| Command | JSON shape (`--format json`) | Repeat / idempotency | Errors (exit 1) |
+| :--- | :--- | :--- | :--- |
+| `gh project list --owner O --format json` | `{projects[], totalCount}` | Read | No scope: `your authentication token is missing required scopes [read:project]` |
+| `gh project view P --owner O --format json` | `{id, number, title, url, public, closed, readme, shortDescription, owner{login,type}, fields{totalCount}, items{totalCount}}` | Read | `GraphQL: Could not resolve to a ProjectV2 with the number P. (user.projectV2)` |
+| `gh project create --owner O --title T --format json` | Same as `view` | **Not idempotent**: a second create with the same title makes a new Project. Look it up first | — |
+| `gh project link P --owner O --repo O/R` (and `unlink`) | No output | A repeat link and a repeat unlink both exit 0 silently. Verify with GraphQL `repository{projectsV2{nodes{number}}}` | — |
+| `gh project field-list P --owner O --format json` | `{fields[{id, name, type, options?[{id, name}]}], totalCount}`. A new Project has 13 built-in fields, including `Status` (Todo, In Progress, Done) | Read; default `--limit 30` | — |
+| `gh project field-create P --owner O --name X --data-type TEXT\|NUMBER\|DATE\|SINGLE_SELECT [--single-select-options "A,B"] --format json` | `{id, name, type, options?}` | **Not idempotent**: a duplicate name fails | `GraphQL: Name has already been taken (createProjectV2Field)`. `ITERATION` is rejected by the flag: `valid values are {TEXT\|SINGLE_SELECT\|DATE\|NUMBER}` |
+| `gh project item-add P --owner O --url URL --format json` | `{id, title, type: Issue\|PullRequest, url, body}` | **Idempotent**: a repeat add returns the same item id | `resource not found, please check the URL` |
+| `gh project item-list P --owner O --format json --limit N` | `{items[{id, title, content{…}, status, labels, milestone, assignees, repository, <field name>…}], totalCount}` | Read; default `--limit 30`, gh pages internally | — |
+| `gh project item-edit --id ITEM --project-id PID --field-id FID --single-select-option-id OID --format json` | Same as `item-add` | Idempotent (sets a value) | `GraphQL: The single select option Id does not belong to the field (updateProjectV2ItemFieldValue)` |
+| `gh project edit P --owner O --readme R --description D --visibility PUBLIC\|PRIVATE --format json` | Same as `view` | Idempotent | — |
+| `gh project delete P --owner O --format json` | `{number, title, …}` | A second delete fails with the not-found error above | — |
+
+Beyond the `gh project` flags:
+
+| Capability | Result | How |
+| :--- | :--- | :--- |
+| Change the built-in `Status` options | **Possible** | GraphQL `updateProjectV2Field(input:{fieldId, singleSelectOptions:[{name, color, description}]})`. It replaces the whole list and **regenerates every option id**, so re-read the ids afterwards |
+| `ITERATION` field | **GraphQL only** | `createProjectV2Field(input:{projectId, dataType:ITERATION, name, iterationConfiguration:{startDate, duration, iterations:[]}})` |
+| Create views | **Possible** | REST `POST users/O/projectsV2/P/views` (`orgs/O/…` for organisations) with `name` and `layout` (table, board or roadmap), or GraphQL `createProjectV2View`. A view's configuration accepts only `layout`, `filter` and `visibleFieldIds`: **group-by and sort are web-UI only** |
+| Built-in workflows (auto-add, item closed, PR merged, …) | **Read and delete only** | `ProjectV2.workflows` lists them with `enabled`; the only mutation is `deleteProjectV2Workflow`. Enabling or configuring them is web-UI only. A new Project starts with "Auto-add sub-issues to project" on and the rest off |
+| Rate and size | Cheap | GraphQL `items(first:100)` costs 1 point per page, so about 500 issues take 5 pages (5 of 5,000 points an hour). `gh project item-list --limit 500` pages internally |
+
+**Unverified:**
+
+- The minimum gh version per flag: only 2.100.0 was tested.
+- Fine-grained PATs and organisation Projects: no fine-grained token or organisation was available. Community reports say fine-grained PATs cannot reach user-owned Projects.
+
 ## Token scopes
 
 | Feature | Classic OAuth scope | Fine-grained permission |
@@ -46,10 +80,13 @@ Reactions accepted by the REST API: `+1`, `-1`, `laugh`, `confused`, `heart`, `h
 | Issues, PRs, labels, private repositories | `repo` | Issues, Pull requests: write; Contents: write; Metadata: read |
 | Pushing `.github/workflows/*` | `workflow` | Workflows: write |
 | Rulesets | `repo` (as a repository admin) | Administration: write |
-| Projects board | `project` | Projects: write (organization) |
+| Projects board: read | `read:project` (verified) | Projects: read (organization only) |
+| Projects board: write | `project` (verified; includes read) | Projects: write (organization only) |
 | Deleting sandbox repositories (maintainers only) | `delete_repo` | Administration: write |
 
 Add a scope with `gh auth refresh -s <scope>`. `gh auth status` lists classic scopes; fine-grained tokens show none, so check those permissions in the token settings. Treat this table as a guide, and confirm against GitHub's documentation if a call returns 403. Recommend a fine-grained token limited to the one repository when the user worries about blast radius.
+
+**GitHub App bots cannot manage user-owned Projects.** Apps have only an organisation Projects permission, and every Projects endpoint open to installation tokens is under `/orgs/{org}/projectsV2` ([permissions](https://docs.github.com/en/rest/authentication/permissions-required-for-github-apps), [endpoints](https://docs.github.com/en/rest/authentication/endpoints-available-for-github-app-installation-access-tokens)). On a personal account, Project commands run as the user (#40). After `gh auth refresh -s project`, `gh auth status` lists `'project'` among the token scopes.
 
 ## Manual mode
 
