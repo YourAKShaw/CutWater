@@ -77,6 +77,16 @@ export function handle(state, args, { input = "", cwd = process.cwd() } = {}) {
     injected.times--;
     return fail(injected.stderr);
   }
+  // The request lands on GitHub, but the client sees a failure (#45).
+  const lost = (state.lostResponses ?? []).find(
+    (f) => args.join(" ").includes(f.match) && f.times > 0,
+  );
+  if (lost) {
+    lost.times--;
+    state.calls.pop();
+    handle(state, args, { input, cwd });
+    return fail(lost.stderr ?? "HTTP 502: Bad Gateway");
+  }
   if (args[0] === "--version") return ok("gh version 2.100.0 (2026-09-03)\n");
   if (verb === "auth status") {
     if (!state.authenticated)

@@ -645,6 +645,18 @@ function log(ctx, entry) {
   } catch {
   }
 }
+function isReplaySafe(cmd, args) {
+  if (!isMutating(cmd, args)) return true;
+  const verb = `${args[0] ?? ""} ${args[1] ?? ""}`;
+  if (verb === "label create") return args.includes("--force");
+  if (args[0] === "project") return !PROJECT_NO_RETRY.has(args[1] ?? "");
+  if (args[0] === "api") {
+    const { method, path } = parseApiArgs(args);
+    if (["PUT", "PATCH", "DELETE"].includes(method)) return true;
+    return method === "POST" && /\/issues\/\d+\/reactions$/.test(path);
+  }
+  return false;
+}
 var sleep = (ms) => new Promise((resolve2) => setTimeout(resolve2, ms));
 async function run(ctx, cmd, args, opts = {}) {
   assertAllowed(cmd, args, ctx.repo, { viewer: ctx.viewer, projectIds: ctx.projectIds });
@@ -671,8 +683,24 @@ async function run(ctx, cmd, args, opts = {}) {
       throw new CutwaterError("USAGE", `git ${args.join(" ")} failed: ${result.stderr.trim()}`);
     }
     const failure = classifyGhFailure(result.stderr);
-    const replaySafe = !(args[0] === "project" && PROJECT_NO_RETRY.has(args[1] ?? ""));
-    if (failure.transient && replaySafe && attempt < MAX_RETRIES) {
+    if (failure.transient && attempt < MAX_RETRIES) {
+      if (!isReplaySafe(cmd, args)) {
+        if (opts.reconcile === void 0) {
+          if (opts.allowFailure) return result;
+          throw new CutwaterError(
+            "REMOTE",
+            `gh ${args.slice(0, 2).join(" ")} failed with an unknown outcome: ${firstLine(result.stderr)}. It may have succeeded; check before running it again`,
+            {
+              status: failure.status,
+              stderr: result.stderr.trim().slice(0, 2e3),
+              unknownOutcome: true
+            }
+          );
+        }
+        const found = await opts.reconcile();
+        log(ctx, { cmd, args, mutating, reconciled: found !== null, attempt });
+        if (found !== null) return found;
+      }
       const delay = ctx.retryBaseMs * 2 ** attempt * (1 + Math.random() * 0.5);
       attempt++;
       await sleep(delay);
@@ -1440,7 +1468,16 @@ async function ensureRuleset(ctx, repo, confirmed) {
     command = ["api", "--method", "POST", `repos/${repo}/rulesets`, "--input", "-"];
   }
   if (!confirmed) return { action: "needs-confirmation", id, command: ["gh", ...command] };
-  const result = await gh(ctx, command, { input: JSON.stringify(desired) });
+  const result = await gh(ctx, command, {
+    input: JSON.stringify(desired),
+    // A create whose response was lost may have landed: look it up by name first.
+    ...lookup.ruleset ? {} : {
+      reconcile: async () => {
+        const again = await findRuleset(ctx, repo);
+        return again.ruleset ? { code: 0, stdout: JSON.stringify({ id: again.ruleset.id }), stderr: "" } : null;
+      }
+    }
+  });
   if (ctx.dryRun) return { action: "planned", id, command: ["gh", ...command] };
   const created = JSON.parse(result.stdout || "{}");
   return {

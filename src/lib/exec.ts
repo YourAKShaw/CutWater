@@ -520,6 +520,31 @@ export interface CallOptions {
   input?: string;
   /** Return failures instead of throwing. */
   allowFailure?: boolean;
+  /**
+   * For a call that is not replay-safe: after a transient failure, look up
+   * whether its effect happened. Return a result standing in for the call's
+   * output if it did, or null to send the call again. Without it, a lost
+   * response is reported as an unknown outcome and never resent.
+   */
+  reconcile?: () => Promise<RunResult | null>;
+}
+
+/**
+ * Whether resending this call after a lost response is harmless. Reads and
+ * upserts are; creates are not, because the first attempt may have landed.
+ */
+export function isReplaySafe(cmd: string, args: string[]): boolean {
+  if (!isMutating(cmd, args)) return true;
+  const verb = `${args[0] ?? ""} ${args[1] ?? ""}`;
+  if (verb === "label create") return args.includes("--force");
+  if (args[0] === "project") return !PROJECT_NO_RETRY.has(args[1] ?? "");
+  if (args[0] === "api") {
+    const { method, path } = parseApiArgs(args);
+    if (["PUT", "PATCH", "DELETE"].includes(method)) return true;
+    // Adding the same reaction again returns the existing one.
+    return method === "POST" && /\/issues\/\d+\/reactions$/.test(path);
+  }
+  return false;
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -558,10 +583,25 @@ export async function run(
       throw new CutwaterError("USAGE", `git ${args.join(" ")} failed: ${result.stderr.trim()}`);
     }
     const failure = classifyGhFailure(result.stderr);
-    // A lost response may hide a create that succeeded; replaying it would
-    // duplicate the Project or field (#6). #45 generalises this.
-    const replaySafe = !(args[0] === "project" && PROJECT_NO_RETRY.has(args[1] ?? ""));
-    if (failure.transient && replaySafe && attempt < MAX_RETRIES) {
+    if (failure.transient && attempt < MAX_RETRIES) {
+      // A lost response may hide a create that succeeded (#45): check before resending.
+      if (!isReplaySafe(cmd, args)) {
+        if (opts.reconcile === undefined) {
+          if (opts.allowFailure) return result;
+          throw new CutwaterError(
+            "REMOTE",
+            `gh ${args.slice(0, 2).join(" ")} failed with an unknown outcome: ${firstLine(result.stderr)}. It may have succeeded; check before running it again`,
+            {
+              status: failure.status,
+              stderr: result.stderr.trim().slice(0, 2000),
+              unknownOutcome: true,
+            },
+          );
+        }
+        const found = await opts.reconcile();
+        log(ctx, { cmd, args, mutating, reconciled: found !== null, attempt });
+        if (found !== null) return found;
+      }
       const delay = ctx.retryBaseMs * 2 ** attempt * (1 + Math.random() * 0.5);
       attempt++;
       await sleep(delay);

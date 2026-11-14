@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { CutwaterError } from "../src/lib/errors.ts";
-import { assertAllowed, gh, isMutating, parseApiArgs } from "../src/lib/exec.ts";
+import { assertAllowed, gh, isMutating, isReplaySafe, parseApiArgs } from "../src/lib/exec.ts";
 import { viewerLogin } from "../src/lib/preflight.ts";
 import { fakeRunner, testContext } from "./helpers.ts";
 
@@ -320,4 +320,65 @@ test("never replays a non-idempotent project create after a transient failure", 
     ]),
   );
   assert.ok(again.calls.length > 1, "reads still retry");
+});
+
+test("classifies which mutations are safe to resend", () => {
+  const safe: string[][] = [
+    ["label", "list", "--repo", "o/r"],
+    ["label", "create", "x", "--force", "--repo", "o/r"],
+    ["api", "--method", "PUT", "repos/o/r/rulesets/1"],
+    ["api", "-X", "POST", "repos/o/r/issues/3/reactions", "-f", "content=eyes"],
+    ["project", "item-add", "1", "--owner", "o", "--url", "u"],
+  ];
+  const unsafe: string[][] = [
+    ["label", "create", "x", "--repo", "o/r"],
+    ["repo", "create", "o/r"],
+    ["api", "--method", "POST", "repos/o/r/rulesets", "--input", "-"],
+    ["project", "create", "--owner", "o", "--title", "t"],
+    ["project", "field-create", "1", "--owner", "o", "--name", "n"],
+  ];
+  for (const args of safe) assert.equal(isReplaySafe("gh", args), true, args.join(" "));
+  for (const args of unsafe) assert.equal(isReplaySafe("gh", args), false, args.join(" "));
+});
+
+test("a create with a lost response is never resent blindly", async () => {
+  let attempts = 0;
+  const { runner } = fakeRunner(() => {
+    attempts++;
+    return { code: 1, stderr: "HTTP 502: Bad Gateway" };
+  });
+  const ctx = testContext({ runner, repo: "o/r" });
+  const post = ["api", "--method", "POST", "repos/o/r/rulesets", "--input", "-"];
+  await assert.rejects(
+    gh(ctx, post, { input: "{}" }),
+    (error: unknown) =>
+      error instanceof CutwaterError &&
+      error.code === "REMOTE" &&
+      /unknown outcome/.test(error.message),
+  );
+  assert.equal(attempts, 1);
+
+  // Reconciled and found: the stand-in result is returned, nothing is resent.
+  attempts = 0;
+  const found = await gh(ctx, post, {
+    input: "{}",
+    reconcile: async () => ({ code: 0, stdout: '{"id":7}', stderr: "" }),
+  });
+  assert.equal(found.stdout, '{"id":7}');
+  assert.equal(attempts, 1);
+
+  // Reconciled and absent: resent, with retries still bounded.
+  attempts = 0;
+  let lookups = 0;
+  await assert.rejects(
+    gh(ctx, post, {
+      input: "{}",
+      reconcile: async () => {
+        lookups++;
+        return null;
+      },
+    }),
+  );
+  assert.equal(attempts, 4);
+  assert.equal(lookups, 3);
 });
