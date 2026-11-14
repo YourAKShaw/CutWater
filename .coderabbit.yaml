@@ -1,0 +1,12 @@
+# Copyright 2026 Ayush Kumar Shaw
+# SPDX-License-Identifier: Apache-2.0
+
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# Repository config overrides the organisation UI settings, so it repeats
+# today's profile and changes only which base branches are reviewed.
+reviews:
+  profile: assertive
+  auto_review:
+    # Review stacked PRs too, not just PRs into the default branch.
+    base_branches:
+      - ".*"

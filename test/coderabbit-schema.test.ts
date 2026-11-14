@@ -44,3 +44,13 @@ test("the rendered .coderabbit.yaml validates against CodeRabbit's v2 schema", (
   assert.equal(validate({ reviews: { profile: "loud" } }), false);
   assert.equal(validate({ tone_instructions: "x".repeat(251) }), false);
 });
+
+test("this repository's own .coderabbit.yaml validates and reviews stacked PRs", () => {
+  const validate = new Ajv2020({ strict: false, allErrors: true }).compile(schema);
+  const config = parse(readFileSync(join(import.meta.dirname, "../.coderabbit.yaml"), "utf8")) as {
+    reviews: { profile: string; auto_review: { base_branches: string[] } };
+  };
+  assert.ok(validate(config), JSON.stringify(validate.errors));
+  assert.equal(config.reviews.profile, "assertive");
+  assert.deepEqual(config.reviews.auto_review.base_branches, [".*"]);
+});
