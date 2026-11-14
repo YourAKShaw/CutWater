@@ -13,7 +13,8 @@ import { isMutating } from "../src/lib/exec.ts";
 import { listLabels } from "../src/lib/labels.ts";
 import { readManifest } from "../src/lib/manifest.ts";
 import { computePlan } from "../src/lib/plan.ts";
-import { preflight } from "../src/lib/preflight.ts";
+import { isBotLogin, parseActiveAccount, parseScopes, preflight } from "../src/lib/preflight.ts";
+import { CutwaterError } from "../src/lib/errors.ts";
 import { desiredRuleset, ensureRuleset } from "../src/lib/ruleset.ts";
 import { MANIFEST_PATH } from "../src/version.ts";
 import { sandbox, writeFiles, type Sandbox } from "./helpers.ts";
@@ -363,4 +364,55 @@ test("apply lists the CodeRabbit next steps only when CodeRabbit is chosen", asy
       assert.match(applied.nextSteps[0] ?? "", /references\/coderabbit\.md/);
     }
   }
+});
+
+test("preflight resolves the bot login from an App installation token", async () => {
+  const box = sandbox();
+  box.state.appToken = true;
+  box.state.login = "yourakshawai[bot]";
+  const result = await preflight(box.ctx, null);
+  assert.equal(result.ok, true);
+  assert.equal(result.login, "yourakshawai[bot]");
+  assert.equal(box.ctx.viewer, "yourakshawai[bot]");
+});
+
+test("a 403 on GET /user without a bot account fails as AUTH", async () => {
+  const box = sandbox();
+  box.state.appToken = true; // refuses GET /user, but auth status names a person
+  await assert.rejects(
+    preflight(box.ctx, null),
+    (error: unknown) => error instanceof CutwaterError && error.code === "AUTH",
+  );
+});
+
+test("parses the active account from gh auth status", () => {
+  const text = [
+    "github.com",
+    "  ✓ Logged in to github.com account yourakshawai[bot] (GH_TOKEN)",
+    "  - Active account: true",
+    "  ✓ Logged in to github.com account YourAKShaw (keyring)",
+    "  - Active account: false",
+  ].join("\n");
+  assert.equal(parseActiveAccount(text), "yourakshawai[bot]");
+  assert.equal(parseActiveAccount(text.replace("true", "false")), null);
+  assert.equal(isBotLogin("yourakshawai[bot]"), true);
+  assert.equal(isBotLogin("YourAKShaw"), false);
+});
+
+test("token scopes come from the active account only", () => {
+  const text = [
+    "github.com",
+    "  ✓ Logged in to github.com account yourakshawai[bot] (GH_TOKEN)",
+    "  - Active account: true",
+    "  - Git operations protocol: https",
+    "  ✓ Logged in to github.com account YourAKShaw (keyring)",
+    "  - Active account: false",
+    "  - Token scopes: 'gist', 'project', 'repo'",
+  ].join("\n");
+  assert.equal(parseScopes(text), null);
+  assert.deepEqual(parseScopes(text.replace("true", "x").replace("false", "true")), [
+    "gist",
+    "project",
+    "repo",
+  ]);
 });

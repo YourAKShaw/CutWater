@@ -49,6 +49,7 @@ import {
   repoView,
   resolveRepo,
   viewerLogin,
+  isBotLogin,
 } from "./lib/preflight.ts";
 import { ensureRuleset, findRuleset } from "./lib/ruleset.ts";
 import { formatMerged, formatRead, readMerged, readRunLog, readThread } from "./lib/read.ts";
@@ -518,6 +519,11 @@ async function cmdBranchName(env: Env): Promise<number> {
   if (!login) {
     await requireAuth(env);
     login = await viewerLogin(env.ctx);
+    if (isBotLogin(login))
+      throw new CutwaterError(
+        "USAGE",
+        `Running as ${login}: branch names use a person's login. Pass --login <user>.`,
+      );
   }
   const issue = intFlag(env.args, "issue");
   if (issue === null)

@@ -3201,8 +3201,12 @@ async function gitInfo(ctx) {
     originRepo: originUrl ? parseGithubRemote(originUrl) : null
   };
 }
+function activeBlock(statusText) {
+  const blocks = statusText.split(/\n(?=\s*[✓X!] .*account )/);
+  return blocks.find((block) => /Active account:\s*true/.test(block)) ?? statusText;
+}
 function parseScopes(statusText) {
-  const match = /Token scopes:\s*(.*)/.exec(statusText);
+  const match = /Token scopes:\s*(.*)/.exec(activeBlock(statusText));
   if (!match) return null;
   const raw = (match[1] ?? "").trim();
   if (raw === "" || raw.toLowerCase() === "none") return [];
@@ -3223,9 +3227,35 @@ async function authInfo(ctx) {
 ${status2.stderr}`;
   return { installed: true, authenticated: status2.code === 0, version, scopes: parseScopes(text) };
 }
+function parseActiveAccount(statusText) {
+  let current = null;
+  for (const line of statusText.split("\n")) {
+    const account = /Logged in to \S+ account (\S+)/.exec(line);
+    if (account) current = account[1] ?? null;
+    else if (/Active account:\s*true/.test(line) && current !== null) return current;
+  }
+  return null;
+}
+function isBotLogin(login) {
+  return /^[A-Za-z0-9-]+\[bot\]$/.test(login);
+}
 async function viewerLogin(ctx) {
-  const result = await gh(ctx, ["api", "user"]);
-  const login = JSON.parse(result.stdout).login;
+  const result = await gh(ctx, ["api", "user"], { allowFailure: true });
+  let login;
+  if (result.code === 0) {
+    login = JSON.parse(result.stdout).login;
+  } else if (/not accessible by integration/i.test(result.stderr)) {
+    const status2 = await gh(ctx, ["auth", "status"], { allowFailure: true });
+    login = parseActiveAccount(`${status2.stdout}
+${status2.stderr}`);
+    if (typeof login !== "string" || !isBotLogin(login))
+      throw new CutwaterError(
+        "AUTH",
+        "gh api user is closed to this token and gh auth status names no bot account"
+      );
+  } else {
+    login = JSON.parse((await gh(ctx, ["api", "user"])).stdout).login;
+  }
   if (typeof login !== "string" || login === "")
     throw new CutwaterError("AUTH", "gh api user returned no login");
   ctx.viewer = login;
@@ -3764,6 +3794,11 @@ async function cmdBranchName(env) {
   if (!login) {
     await requireAuth(env);
     login = await viewerLogin(env.ctx);
+    if (isBotLogin(login))
+      throw new CutwaterError(
+        "USAGE",
+        `Running as ${login}: branch names use a person's login. Pass --login <user>.`
+      );
   }
   const issue = intFlag(env.args, "issue");
   if (issue === null)

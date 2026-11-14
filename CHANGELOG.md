@@ -14,6 +14,10 @@ All notable changes to this project are documented here. The format follows [Kee
 - `cw body issue` accepts optional `trackerRefs` and renders a *Tracker refs* section.
 - An `Issue title` workflow labels non-conforming issues `needs-triage` and comments the fix once; it never edits or closes issues.
 
+### Fixed
+
+- The helper works under a GitHub App installation token: the login comes from `gh auth status` when `GET /user` is closed, `branch-name` asks for `--login` instead of using a bot login, and token scopes are read from the active account only ([#39](https://github.com/YourAKShaw/CutWater/issues/39)).
+
 ### Changed
 
 - Relicensed from MIT to the Apache License 2.0, with a `NOTICE` file in the repository and in the skill package ([#29](https://github.com/YourAKShaw/CutWater/issues/29)). Version 0.1.0 stays available under MIT. The MIT default that cutwater offers scaffolded repositories is unchanged.

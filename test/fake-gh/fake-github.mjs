@@ -159,7 +159,10 @@ export function handle(state, args, { input = "", cwd = process.cwd() } = {}) {
 
   if (args[0] === "api") {
     const { method, path, fields } = apiArgs(args);
-    if (path === "user") return json({ login: state.login });
+    if (path === "user") {
+      if (state.appToken) return fail("gh: Resource not accessible by integration (HTTP 403)");
+      return json({ login: state.login });
+    }
     const dotGithub = /^repos\/([^/]+)\/\.github(?:\/contents\/(.+))?$/.exec(path);
     if (dotGithub) {
       const files = state.orgDotGithub[dotGithub[1]];

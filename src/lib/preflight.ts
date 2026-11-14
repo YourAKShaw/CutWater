@@ -73,8 +73,16 @@ export async function gitInfo(ctx: ExecContext): Promise<GitInfo> {
   };
 }
 
+/** The `gh auth status` lines of the active account (all of it when none is marked). */
+function activeBlock(statusText: string): string {
+  const blocks = statusText.split(/\n(?=\s*[✓X!] .*account )/);
+  return blocks.find((block) => /Active account:\s*true/.test(block)) ?? statusText;
+}
+
 export function parseScopes(statusText: string): string[] | null {
-  const match = /Token scopes:\s*(.*)/.exec(statusText);
+  // With several accounts, only the active one's scopes apply: a bot token in
+  // GH_TOKEN must not inherit the keyring login's scopes.
+  const match = /Token scopes:\s*(.*)/.exec(activeBlock(statusText));
   if (!match) return null;
   const raw = (match[1] ?? "").trim();
   if (raw === "" || raw.toLowerCase() === "none") return [];
@@ -99,9 +107,44 @@ export async function authInfo(ctx: ExecContext): Promise<AuthInfo> {
   return { installed: true, authenticated: status.code === 0, version, scopes: parseScopes(text) };
 }
 
+/**
+ * The login of gh's active account, from `gh auth status`. Works for App
+ * installation tokens, which cannot call `GET /user`.
+ */
+export function parseActiveAccount(statusText: string): string | null {
+  let current: string | null = null;
+  for (const line of statusText.split("\n")) {
+    const account = /Logged in to \S+ account (\S+)/.exec(line);
+    if (account) current = account[1] ?? null;
+    else if (/Active account:\s*true/.test(line) && current !== null) return current;
+  }
+  return null;
+}
+
+/** GitHub App bots log in as `<app-slug>[bot]`. */
+export function isBotLogin(login: string): boolean {
+  return /^[A-Za-z0-9-]+\[bot\]$/.test(login);
+}
+
 export async function viewerLogin(ctx: ExecContext): Promise<string> {
-  const result = await gh(ctx, ["api", "user"]);
-  const login = (JSON.parse(result.stdout) as { login?: unknown }).login;
+  const result = await gh(ctx, ["api", "user"], { allowFailure: true });
+  let login: unknown;
+  if (result.code === 0) {
+    login = (JSON.parse(result.stdout) as { login?: unknown }).login;
+  } else if (/not accessible by integration/i.test(result.stderr)) {
+    // An App installation token: GET /user is closed to it (#39), but gh
+    // still knows which account the token belongs to.
+    const status = await gh(ctx, ["auth", "status"], { allowFailure: true });
+    login = parseActiveAccount(`${status.stdout}\n${status.stderr}`);
+    if (typeof login !== "string" || !isBotLogin(login))
+      throw new CutwaterError(
+        "AUTH",
+        "gh api user is closed to this token and gh auth status names no bot account",
+      );
+  } else {
+    // Re-run through the typed path so auth and network errors surface properly.
+    login = (JSON.parse((await gh(ctx, ["api", "user"])).stdout) as { login?: unknown }).login;
+  }
   if (typeof login !== "string" || login === "")
     throw new CutwaterError("AUTH", "gh api user returned no login");
   // Remembered so `gh project --owner @me` can be checked against the pin.
