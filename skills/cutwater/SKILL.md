@@ -39,7 +39,7 @@ Run the bundled helper; never read its source. `scripts/` is inside this skill's
 | Command | Purpose |
 | :--- | :--- |
 | `cw preflight` | git, gh auth, login, repository, token scopes |
-| `cw audit` | Check items A1–A16 and classify the repository (read-only) |
+| `cw audit` | Check items A1–A17 and classify the repository (read-only) |
 | `cw defaults --out <answers.json>` | Interview defaults detected from the repository |
 | `cw plan --answers <answers.json> --out <plan.json>` | Render templates and diff them against disk (read-only) |
 | `cw apply --plan <plan.json> [--yes <ids> \| --yes none] [--dry-run]` | Apply the plan; gated ids need the user's yes |

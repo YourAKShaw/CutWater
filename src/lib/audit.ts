@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * Phase 0 audit: checks a repository against the A1–A16 checklist in
+ * Phase 0 audit: checks a repository against the A1–A17 checklist in
  * references/init-checklist.md and classifies it. Read-only.
  */
 import { join } from "node:path";
@@ -88,6 +88,18 @@ export function dependencyConfig(root: string): string | null {
     findFile(root, [".github"], /^dependabot\.ya?ml$/) ??
     findFile(root, ["", ".github"], /^renovate\.json5?$/) ??
     findFile(root, [""], /^\.renovaterc(\.json5?)?$/)
+  );
+}
+
+/**
+ * CodeRabbit's root config, in its precedence order: a committed
+ * `.coderabbit.yaml` or `.yml` wins over `.coderabbit.config.ts`, so writing
+ * YAML next to a TypeScript config would silently disable it.
+ */
+export function coderabbitConfig(root: string): string | null {
+  return (
+    findFile(root, [""], /^\.coderabbit\.ya?ml$/) ??
+    findFile(root, [""], /^\.coderabbit\.config\.ts$/)
   );
 }
 
@@ -386,6 +398,18 @@ export async function audit(ctx: ExecContext, opts: AuditOptions): Promise<Audit
         ? `invalid: ${manifestRead.errors.join("; ")}`
         : "missing",
     fix: FIX.A16 ?? "",
+  });
+
+  const coderabbitChosen = choices?.coderabbit !== undefined && choices.coderabbit !== "off";
+  const coderabbitFound = coderabbitConfig(root);
+  items.push({
+    id: "A17",
+    title: "CodeRabbit config",
+    status: coderabbitFound ? "pass" : coderabbitChosen ? "fail" : "n/a",
+    required: coderabbitChosen,
+    found: coderabbitFound,
+    detail: coderabbitFound ?? (coderabbitChosen ? "missing" : "not chosen"),
+    fix: "scaffold",
   });
 
   const requiredItems = items.filter((item) => item.required);

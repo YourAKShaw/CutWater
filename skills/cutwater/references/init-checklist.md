@@ -32,6 +32,7 @@
 | A14 | Labels | Every label in `assets/labels.json` exists with the same color and description | `gh label create --force` |
 | A15 | Default-branch ruleset | A ruleset targets `~DEFAULT_BRANCH`; required only when the manifest says it was chosen | ruleset API (gated) |
 | A16 | Manifest | `.github/cutwater.json` is valid against `assets/manifest.schema.json` | written by `apply` |
+| A17 | CodeRabbit config | `.coderabbit.yaml`, `.coderabbit.yml` or `.coderabbit.config.ts` in the root (YAML wins over TypeScript, so an existing TypeScript config is never shadowed); required only when the manifest records a `coderabbit` profile | scaffold |
 
 Statuses: ✅ pass, ❌ fail, 🏢 provided by org defaults, ❔ unknown (needs network or permission), ➖ not applicable.
 
@@ -45,7 +46,8 @@ A repository that has everything but no manifest is *partially* set up. The only
 
 ## Optional items and org defaults
 
-- The wiki, the Projects board and the ruleset count only when the manifest says the user chose them.
+- The wiki, the Projects board, the ruleset and the CodeRabbit config count only when the manifest says the user chose them.
+- The CodeRabbit config only tunes reviews; it does not install the CodeRabbit GitHub App. Never add CodeRabbit to the ruleset's required checks: it can skip or be rate-limited and would block merges.
 - An organization's `.github` repository can supply default community health files. They show in the GitHub UI but are not part of the repository clone. The audit reports them as 🏢 "provided by org defaults" and lists them in `orgDefaultsPending`.
 - Ask the user: "Your organization's `.github` repository provides SECURITY.md and CODE_OF_CONDUCT.md. Count those as set up, or add repository-specific copies?" If they count, re-run `cw audit --accept-org-defaults` and set `"acceptOrgDefaults": true` in the answers so later audits remember the decision.
 
@@ -78,6 +80,7 @@ Make no writes. If the user asks for upgrades, re-run the interview with the man
 | `.github/workflows/ci.yml` | `workflows/ci-<stack>.yml` | lint, test or build chosen |
 | `.github/workflows/release.yml` | `workflows/release.yml` | release chosen |
 | `.github/dependabot.yml` or `renovate.json` | `dependabot.yml` / `repo/renovate.json` | per choice |
+| `.coderabbit.yaml` | `repo/coderabbit.yaml` (stack-aware `path_instructions`) | only when `coderabbit` is not `off` |
 | `.gitignore`, `.editorconfig` | `repo/` | always |
 | `.github/cutwater.json` | built by `apply` | always, last |
 

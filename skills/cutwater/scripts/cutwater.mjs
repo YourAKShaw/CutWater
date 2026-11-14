@@ -841,6 +841,7 @@ var LICENSES = ["MIT", "Apache-2.0", "GPL-3.0", "none"];
 var CI_OPTIONS = ["lint", "test", "build", "release"];
 var VISIBILITIES = ["private", "public", "internal"];
 var DEPENDENCY_BOTS = ["dependabot", "renovate", "none"];
+var CODERABBIT_PROFILES = ["off", "quiet", "chill", "assertive"];
 function defaultAnswers(input) {
   const { detection } = input;
   const repo = input.repo ?? `${input.login}/${detection.name.replace(/[^A-Za-z0-9._-]/g, "-")}`;
@@ -863,6 +864,7 @@ function defaultAnswers(input) {
       wiki: false,
       projectsBoard: null,
       ruleset: false,
+      coderabbit: "off",
       commitMode: !input.remoteExists || input.isEmpty ? "direct" : "pr",
       emojiLabels: false,
       acceptOrgDefaults: false
@@ -919,6 +921,9 @@ function validateAnswers(input) {
   if (!oneOf(a.dependencyBot, DEPENDENCY_BOTS)) {
     problems.push(`dependencyBot must be one of ${DEPENDENCY_BOTS.join(", ")}`);
   }
+  if (a.coderabbit !== void 0 && !oneOf(a.coderabbit, CODERABBIT_PROFILES)) {
+    problems.push(`coderabbit must be one of ${CODERABBIT_PROFILES.join(", ")}`);
+  }
   if (!oneOf(a.commitMode, ["direct", "pr"]))
     problems.push('commitMode must be "direct" or "pr"');
   if (!Array.isArray(a.ci) || !a.ci.every((item) => oneOf(item, CI_OPTIONS)) || new Set(a.ci).size !== a.ci.length) {
@@ -959,6 +964,10 @@ function templateVars(answers, root) {
     ciLint: answers.ci.includes("lint"),
     ciTest: answers.ci.includes("test"),
     ciBuild: answers.ci.includes("build"),
+    stackNode: answers.stack === "node" || answers.stack === "node-ts",
+    stackPython: answers.stack === "python",
+    stackGo: answers.stack === "go",
+    coderabbitProfile: answers.coderabbit === void 0 || answers.coderabbit === "off" ? "chill" : answers.coderabbit,
     labelFeat: labelName("type: feat", answers.emojiLabels),
     labelFix: labelName("type: fix", answers.emojiLabels),
     labelChore: labelName("type: chore", answers.emojiLabels),
@@ -990,6 +999,7 @@ var CHOICE_KEYS = /* @__PURE__ */ new Set([
   "wiki",
   "projectsBoard",
   "ruleset",
+  "coderabbit",
   "emojiLabels",
   "acceptOrgDefaults",
   "copyrightYear",
@@ -1046,6 +1056,7 @@ function validateManifest(value) {
     if (!Array.isArray(choices.ci) || !choices.ci.every((item) => ["lint", "test", "build", "release"].includes(item)) || new Set(choices.ci).size !== choices.ci.length) {
       errors.push("choices.ci must be a list of distinct lint, test, build, release");
     }
+    if ("coderabbit" in choices) inSet("coderabbit", ["off", "quiet", "chill", "assertive"]);
     for (const key of ["wiki", "ruleset"])
       if (typeof choices[key] !== "boolean") errors.push(`choices.${key} must be boolean`);
     for (const key of ["emojiLabels", "acceptOrgDefaults"]) {
@@ -1106,6 +1117,8 @@ function choicesFrom(answers) {
     wiki: answers.wiki,
     projectsBoard: answers.projectsBoard,
     ruleset: answers.ruleset,
+    // Recorded only when chosen, so manifests written before this field stay byte-identical.
+    ...answers.coderabbit && answers.coderabbit !== "off" ? { coderabbit: answers.coderabbit } : {},
     emojiLabels: answers.emojiLabels,
     acceptOrgDefaults: answers.acceptOrgDefaults,
     copyrightYear: answers.copyrightYear,
@@ -1456,6 +1469,9 @@ function workflowFiles(root) {
 function dependencyConfig(root) {
   return findFile(root, [".github"], /^dependabot\.ya?ml$/) ?? findFile(root, ["", ".github"], /^renovate\.json5?$/) ?? findFile(root, [""], /^\.renovaterc(\.json5?)?$/);
 }
+function coderabbitConfig(root) {
+  return findFile(root, [""], /^\.coderabbit\.ya?ml$/) ?? findFile(root, [""], /^\.coderabbit\.config\.ts$/);
+}
 var FILE_ITEMS = [
   {
     id: "A3",
@@ -1695,6 +1711,17 @@ async function audit(ctx, opts) {
     found: manifestRead.exists ? ".github/cutwater.json" : null,
     detail: manifestRead.manifest ? "valid" : manifestRead.exists ? `invalid: ${manifestRead.errors.join("; ")}` : "missing",
     fix: FIX.A16 ?? ""
+  });
+  const coderabbitChosen = choices?.coderabbit !== void 0 && choices.coderabbit !== "off";
+  const coderabbitFound = coderabbitConfig(root);
+  items.push({
+    id: "A17",
+    title: "CodeRabbit config",
+    status: coderabbitFound ? "pass" : coderabbitChosen ? "fail" : "n/a",
+    required: coderabbitChosen,
+    found: coderabbitFound,
+    detail: coderabbitFound ?? (coderabbitChosen ? "missing" : "not chosen"),
+    fix: "scaffold"
   });
   const requiredItems = items.filter((item) => item.required);
   const passing = (item) => item.status === "pass" || item.status === "org-default" && acceptOrg;
@@ -2944,6 +2971,17 @@ function fileSpecs(answers, root) {
       }
     });
   }
+  if (answers.coderabbit !== void 0 && answers.coderabbit !== "off") {
+    specs.push({
+      path: ".coderabbit.yaml",
+      template: "repo/coderabbit.yaml",
+      render: asset("repo/coderabbit.yaml"),
+      satisfiedBy: () => {
+        const found = coderabbitConfig(root);
+        return found !== null && found !== ".coderabbit.yaml" ? found : null;
+      }
+    });
+  }
   specs.push(
     {
       path: ".gitignore",
@@ -3297,7 +3335,7 @@ Usage: node scripts/cutwater.mjs <command> [options]
 Setup (Phase 0)
   preflight                         git, gh auth, login, repository, token scopes
   audit [--offline] [--accept-org-defaults]
-                                    check items A1-A16 and classify the repository
+                                    check items A1-A17 and classify the repository
   defaults [--out answers.json]     interview defaults detected from the repository
   plan --answers FILE [--out FILE]  render templates and compare with disk (read-only)
   apply --plan FILE [--yes ID,ID | --yes-file FILE | --yes none] [--dry-run]

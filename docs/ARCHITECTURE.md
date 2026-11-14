@@ -52,7 +52,7 @@ References never link to each other, because agents sometimes preview files part
 | `lib/exec.ts` | The only place processes start: argument arrays and no shell, the allowlist, repository pinning, dry-run, retries, call logging |
 | `lib/errors.ts` | Typed errors (`AUTH`, `SCOPE`, `NOT_FOUND`, `RATE_LIMIT`, `CONFLICT`, `VALIDATION`, …), remediation lines, exit codes |
 | `lib/preflight.ts` | git state, gh auth and scopes, login discovery, repository resolution |
-| `lib/audit.ts` | Items A1–A16, org defaults, classification |
+| `lib/audit.ts` | Items A1–A17, org defaults, classification |
 | `lib/answers.ts`, `lib/detect.ts` | Interview defaults, validation, stack profiles, template variables |
 | `lib/templates.ts` | The strict template renderer and asset lookup |
 | `lib/plan.ts` | Render and compare every file: create, skip, update or conflict, with diffs |

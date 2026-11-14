@@ -34,6 +34,7 @@ export interface Manifest {
     wiki: boolean;
     projectsBoard: string | null;
     ruleset: boolean;
+    coderabbit?: string;
     emojiLabels?: boolean;
     acceptOrgDefaults?: boolean;
     copyrightYear?: string;
@@ -58,6 +59,7 @@ const CHOICE_KEYS = new Set([
   "wiki",
   "projectsBoard",
   "ruleset",
+  "coderabbit",
   "emojiLabels",
   "acceptOrgDefaults",
   "copyrightYear",
@@ -125,6 +127,7 @@ export function validateManifest(value: unknown): string[] {
     ) {
       errors.push("choices.ci must be a list of distinct lint, test, build, release");
     }
+    if ("coderabbit" in choices) inSet("coderabbit", ["off", "quiet", "chill", "assertive"]);
     for (const key of ["wiki", "ruleset"])
       if (typeof choices[key] !== "boolean") errors.push(`choices.${key} must be boolean`);
     for (const key of ["emojiLabels", "acceptOrgDefaults"]) {
@@ -209,6 +212,10 @@ export function choicesFrom(answers: Answers): Manifest["choices"] {
     wiki: answers.wiki,
     projectsBoard: answers.projectsBoard,
     ruleset: answers.ruleset,
+    // Recorded only when chosen, so manifests written before this field stay byte-identical.
+    ...(answers.coderabbit && answers.coderabbit !== "off"
+      ? { coderabbit: answers.coderabbit }
+      : {}),
     emojiLabels: answers.emojiLabels,
     acceptOrgDefaults: answers.acceptOrgDefaults,
     copyrightYear: answers.copyrightYear,

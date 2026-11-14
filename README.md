@@ -47,7 +47,7 @@ The name: a ship's *cutwater* is the forward edge of the bow, the part that goes
 ```mermaid
 flowchart TD
     A[Invocation] --> B[Preflight: git, gh auth, login, repo]
-    B --> C{Audit A1–A16}
+    B --> C{Audit A1–A17}
     C -- fully set up --> D[✅ Setup is complete → upgrades or a task?]
     C -- partial / not set up --> E[One-round interview] --> F[Plan: diffs for every existing file]
     F --> G[Apply what you approved → manifest] --> H[Commit: direct on empty repo, else setup PR]
@@ -110,7 +110,7 @@ node ~/.claude/skills/cutwater/scripts/cutwater.mjs preflight
 
 ```sh
 cw=~/.claude/skills/cutwater/scripts/cutwater.mjs
-node $cw audit                                   # A1–A16 and a classification, read-only
+node $cw audit                                   # A1–A17 and a classification, read-only
 node $cw defaults --out /tmp/answers.json        # interview defaults
 node $cw plan --answers /tmp/answers.json --out /tmp/plan.json
 node $cw apply --plan /tmp/plan.json --yes file:README.md   # gated ids need your yes
@@ -126,7 +126,7 @@ Exit codes: `0` ok · `1` usage or validation · `2` needs confirmation · `3` a
 | Material | Contents |
 | :--- | :--- |
 | [SKILL.md](skills/cutwater/SKILL.md) | Hard rules, helper usage, preflight, Phase 0, the task loop, interruptions, gates, output style |
-| [Audit checklist](skills/cutwater/references/init-checklist.md) | A1–A16, classification, org defaults, what setup creates, scaffold order |
+| [Audit checklist](skills/cutwater/references/init-checklist.md) | A1–A17, classification, org defaults, what setup creates, scaffold order |
 | [Interview](skills/cutwater/references/interview.md) | Questions, defaults, stack detection, the one-round template |
 | [Task lifecycle](skills/cutwater/references/task-lifecycle.md) | Issue bodies, branches, commits, PR bodies, trivial edits, resuming |
 | [Interruptions](skills/cutwater/references/interruptions.md) | The comment, edit-and-log and new-issue rules, with worked examples |
