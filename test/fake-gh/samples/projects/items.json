@@ -1,0 +1,46 @@
+{
+  "items": [
+    {
+      "assignees": ["YourAKShaw"],
+      "content": {
+        "number": 6,
+        "repository": "YourAKShaw/CutWater",
+        "title": "🔍️ docs(gh-commands): verify gh project capabilities and token matrix",
+        "type": "Issue",
+        "url": "https://github.com/YourAKShaw/CutWater/issues/6"
+      },
+      "id": "PVTI_lAHOAxJpEs4BriGOzhIm4bg",
+      "labels": ["type: docs", "priority: p0", "kind: spike", "area: projects"],
+      "milestone": {
+        "description": "Opt-in, gated, idempotent GitHub Projects (V2) support. Tracked by the v0.2.0 epic.",
+        "dueOn": "",
+        "title": "v0.2.0 — GitHub Projects"
+      },
+      "repository": "https://github.com/YourAKShaw/CutWater",
+      "status": "Todo",
+      "title": "🔍️ docs(gh-commands): verify gh project capabilities and token matrix"
+    },
+    {
+      "assignees": ["YourAKShaw"],
+      "content": {
+        "number": 38,
+        "repository": "YourAKShaw/CutWater",
+        "title": "docs(agents): :memo: add a session handoff file for all agents (#37)",
+        "type": "PullRequest",
+        "url": "https://github.com/YourAKShaw/CutWater/pull/38"
+      },
+      "id": "PVTI_lAHOAxJpEs4BriGOzhIm4fg",
+      "labels": ["type: docs"],
+      "milestone": {
+        "description": "Opt-in, gated, idempotent GitHub Projects (V2) support. Tracked by the v0.2.0 epic.",
+        "dueOn": "",
+        "title": "v0.2.0 — GitHub Projects"
+      },
+      "repository": "https://github.com/YourAKShaw/CutWater",
+      "reviewers": ["YourAKShaw"],
+      "status": "Done",
+      "title": "docs(agents): :memo: add a session handoff file for all agents (#37)"
+    }
+  ],
+  "totalCount": 2
+}
