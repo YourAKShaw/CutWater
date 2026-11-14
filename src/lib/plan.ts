@@ -217,7 +217,9 @@ export function fileSpecs(answers: Answers, root: string): FileSpec[] {
       satisfiedBy: () => {
         const found = coderabbitConfig(root);
         if (found !== null && found !== ".coderabbit.yaml") return found;
-        return readText(join(root, ".coderabbit.config.ts")) === null ? null : ".coderabbit.config.ts";
+        return readText(join(root, ".coderabbit.config.ts")) === null
+          ? null
+          : ".coderabbit.config.ts";
       },
     });
   }
@@ -357,6 +359,10 @@ export function computePlan(input: PlanInput): Plan {
   if (answers.ruleset)
     notes.push(
       "Ruleset chosen: run `ruleset ensure` after the setup commit reaches the default branch (it blocks direct pushes).",
+    );
+  if (answers.coderabbit !== undefined && answers.coderabbit !== "off")
+    notes.push(
+      "CodeRabbit chosen: the config works only once the user installs the CodeRabbit GitHub App; a bot that opens PRs needs a review seat. Walk them through references/coderabbit.md.",
     );
   if (answers.wiki)
     notes.push(

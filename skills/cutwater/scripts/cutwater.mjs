@@ -2978,7 +2978,8 @@ function fileSpecs(answers, root) {
       render: asset("repo/coderabbit.yaml"),
       satisfiedBy: () => {
         const found = coderabbitConfig(root);
-        return found !== null && found !== ".coderabbit.yaml" ? found : null;
+        if (found !== null && found !== ".coderabbit.yaml") return found;
+        return readText(join7(root, ".coderabbit.config.ts")) === null ? null : ".coderabbit.config.ts";
       }
     });
   }
@@ -3098,6 +3099,10 @@ function computePlan(input) {
   if (answers.ruleset)
     notes.push(
       "Ruleset chosen: run `ruleset ensure` after the setup commit reaches the default branch (it blocks direct pushes)."
+    );
+  if (answers.coderabbit !== void 0 && answers.coderabbit !== "off")
+    notes.push(
+      "CodeRabbit chosen: the config works only once the user installs the CodeRabbit GitHub App; a bot that opens PRs needs a review seat. Walk them through references/coderabbit.md."
     );
   if (answers.wiki)
     notes.push(

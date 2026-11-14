@@ -337,3 +337,11 @@ test("a .coderabbit.config.ts is respected: no YAML is written to override it", 
   assert.equal(entry?.action, "skip");
   assert.match(entry?.reason ?? "", /\.coderabbit\.config\.ts/);
 });
+
+test("the plan points to the CodeRabbit checklist only when CodeRabbit is chosen", async () => {
+  const box = sandbox({ files: { "package.json": '{"name":"demo"}' } });
+  const note = (notes: string[]) => notes.some((n) => n.includes("references/coderabbit.md"));
+  assert.equal(note((await plan(box, await answersFor(box))).notes), false);
+  const chosen = await plan(box, await answersFor(box, { coderabbit: "assertive" }));
+  assert.equal(note(chosen.notes), true);
+});
