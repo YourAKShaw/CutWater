@@ -42,7 +42,7 @@ Reactions accepted by the REST API: `+1`, `-1`, `laugh`, `confused`, `heart`, `h
 
 ## Projects (V2)
 
-Verified on gh 2.100.0 on 2026-11-14 against a throwaway user-owned Project (#6), with a classic OAuth token. Raw samples: `test/fake-gh/samples/projects/`. Every `gh project` command uses GraphQL, takes `--owner O` (not `--repo`) and needs the `project` scope; `--owner @me` means the current user. Placeholders: `P` is the Project number, `PID` its node id (`PVT_…`), `FID` a field id, `OID` an option id, `ITEM` an item id (`PVTI_…`).
+Verified on gh 2.100.0 on 2026-11-14 against a throwaway user-owned Project (#6), with a classic OAuth token. Raw samples: `test/fake-gh/samples/projects/`. Every `gh project` command uses GraphQL, takes `--owner O` (not `--repo`) and needs `read:project` for reads or `project` for writes; `--owner @me` means the current user. Placeholders: `P` is the Project number, `PID` its node id (`PVT_…`), `FID` a field id, `OID` an option id, `ITEM` an item id (`PVTI_…`).
 
 | Command | JSON shape (`--format json`) | Repeat / idempotency | Errors (exit 1) |
 | :--- | :--- | :--- | :--- |
