@@ -104,6 +104,8 @@ export async function viewerLogin(ctx: ExecContext): Promise<string> {
   const login = (JSON.parse(result.stdout) as { login?: unknown }).login;
   if (typeof login !== "string" || login === "")
     throw new CutwaterError("AUTH", "gh api user returned no login");
+  // Remembered so `gh project --owner @me` can be checked against the pin.
+  ctx.viewer = login;
   return login;
 }
 

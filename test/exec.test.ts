@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { CutwaterError } from "../src/lib/errors.ts";
 import { assertAllowed, gh, isMutating, parseApiArgs } from "../src/lib/exec.ts";
+import { viewerLogin } from "../src/lib/preflight.ts";
 import { fakeRunner, testContext } from "./helpers.ts";
 
 const forbidden = (fn: () => void) =>
@@ -117,4 +118,98 @@ test("does not retry permanent failures", async () => {
   const ctx = testContext({ runner, repo: "o/r" });
   await assert.rejects(gh(ctx, ["label", "list", "--repo", "o/r"]));
   assert.equal(attempts, 1);
+});
+
+// gh project takes --owner, not --repo, so it has its own pin (#8). This is the
+// boundary that stops an injected agent from editing someone else's board.
+test("pins gh project reads and writes to the repository owner (security)", () => {
+  for (const verb of ["list", "view", "field-list", "item-list"]) {
+    assertAllowed("gh", ["project", verb, "1", "--owner", "O", "--format", "json"], "o/r");
+  }
+  for (const verb of ["create", "field-create", "item-add"]) {
+    assertAllowed("gh", ["project", verb, "1", "--owner=o"], "o/r");
+  }
+  forbidden(() => assertAllowed("gh", ["project", "view", "1"], "o/r"));
+  forbidden(() => assertAllowed("gh", ["project", "view", "1", "--owner", "evil"], "o/r"));
+  forbidden(() =>
+    assertAllowed("gh", ["project", "item-add", "1", "--owner", "o", "--owner", "evil"], "o/r"),
+  );
+  forbidden(() => assertAllowed("gh", ["project", "list", "--owner", "o"], null));
+  forbidden(() => assertAllowed("gh", ["project", "item-create", "1", "--owner", "o"], "o/r"));
+  assert.throws(
+    () => assertAllowed("gh", ["project", "view", "1", "--owner", "evil"], "o/r"),
+    /refusing to touch projects of evil: this run is pinned to o\/r/,
+  );
+});
+
+test("accepts --owner @me only when the viewer is the pinned owner (security)", () => {
+  const me = ["project", "list", "--owner", "@me"];
+  assertAllowed("gh", me, "o/r", { viewer: "O" });
+  forbidden(() => assertAllowed("gh", me, "o/r", { viewer: "someone-else" }));
+  forbidden(() => assertAllowed("gh", me, "o/r"));
+});
+
+test("project link must name the pinned repository (security)", () => {
+  const link = ["project", "link", "1", "--owner", "o"];
+  assertAllowed("gh", [...link, "--repo", "o/r"], "o/r");
+  assertAllowed("gh", [...link, "-R", "O/R"], "o/r");
+  forbidden(() => assertAllowed("gh", link, "o/r"));
+  forbidden(() => assertAllowed("gh", [...link, "--repo", "o/other"], "o/r"));
+  forbidden(() => assertAllowed("gh", [...link, "--repo", "o/r", "-R", "o/other"], "o/r"));
+});
+
+test("item-edit is allowed only for project ids verified as the owner's (security)", () => {
+  const edit = ["project", "item-edit", "--id", "PVTI_1", "--field-id", "F", "--project-id"];
+  const projectIds = new Set(["PVT_ok"]);
+  assertAllowed("gh", [...edit, "PVT_ok"], "o/r", { projectIds });
+  forbidden(() => assertAllowed("gh", [...edit, "PVT_other"], "o/r", { projectIds }));
+  forbidden(() => assertAllowed("gh", [...edit, "PVT_ok"], "o/r"));
+  forbidden(() =>
+    assertAllowed("gh", [...edit, "PVT_ok", "--project-id", "PVT_other"], "o/r", { projectIds }),
+  );
+  forbidden(() =>
+    assertAllowed("gh", ["project", "item-edit", "--id", "PVTI_1"], "o/r", { projectIds }),
+  );
+});
+
+test("never runs destructive gh project verbs, even for the pinned owner", () => {
+  for (const verb of [
+    "delete",
+    "close",
+    "unlink",
+    "field-delete",
+    "item-delete",
+    "item-archive",
+    "copy",
+    "mark-template",
+  ]) {
+    assert.throws(
+      () => assertAllowed("gh", ["project", verb, "1", "--owner", "o"], "o/r"),
+      new RegExp(`gh project ${verb} is never run by cutwater`),
+    );
+  }
+});
+
+test("classifies gh project writes as mutating, so dry-run skips them", async () => {
+  assert.equal(isMutating("gh", ["project", "item-add", "1", "--owner", "o"]), true);
+  assert.equal(isMutating("gh", ["project", "item-edit", "--id", "x"]), true);
+  assert.equal(isMutating("gh", ["project", "view", "1", "--owner", "o"]), false);
+  const { runner, calls } = fakeRunner(() => ({ stdout: "{}" }));
+  const ctx = testContext({ runner, repo: "o/r", dryRun: true });
+  await gh(ctx, ["project", "create", "--owner", "o", "--title", "T"]);
+  await gh(ctx, ["project", "view", "1", "--owner", "o"]);
+  assert.deepEqual(
+    calls.map((c) => c.args[1]),
+    ["view"],
+  );
+  assert.equal(ctx.planned.length, 1);
+});
+
+test("remembers the viewer login so @me can be checked without another call", async () => {
+  const { runner, calls } = fakeRunner(() => ({ stdout: '{"login":"O"}' }));
+  const ctx = testContext({ runner, repo: "o/r" });
+  assert.equal(await viewerLogin(ctx), "O");
+  assert.equal(ctx.viewer, "O");
+  assertAllowed("gh", ["project", "list", "--owner", "@me"], ctx.repo, { viewer: ctx.viewer });
+  assert.equal(calls.length, 1);
 });

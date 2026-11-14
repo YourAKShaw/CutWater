@@ -8,7 +8,9 @@
  *   GitHub can never be interpreted as shell syntax.
  * - Every gh and git call passes an allowlist; `gh pr merge` and pushes are
  *   refused outright (invariant I1).
- * - gh calls are pinned to one repository (`--repo` or `repos/OWNER/NAME`).
+ * - gh calls are pinned to one repository (`--repo` or `repos/OWNER/NAME`);
+ *   `gh project` calls are pinned to that repository's owner (`--owner`),
+ *   or to a Project id verified as the owner's (`--project-id`).
  * - Mutating calls are skipped in dry-run mode and recorded instead.
  * - Transient failures are retried with jittered exponential backoff.
  * - When CUTWATER_LOG names a file, every call is appended to it as a JSON
@@ -80,6 +82,14 @@ export interface ExecContext {
   dryRun: boolean;
   /** owner/name every gh call is pinned to, once known. */
   repo: string | null;
+  /** The authenticated login, so `--owner @me` can be checked against the pin. */
+  viewer: string | null;
+  /**
+   * Project node ids (`PVT_…`) verified to belong to the pinned owner. Only
+   * project code adds to it, after checking the owner live; `item-edit`
+   * takes no `--owner`, so it is allowed only for these ids.
+   */
+  projectIds: Set<string>;
   /** Mutating commands skipped because of dry-run. */
   planned: PlannedCommand[];
   /** Base delay for retries in milliseconds. */
@@ -99,6 +109,8 @@ export function createContext(overrides: Partial<ExecContext> = {}): ExecContext
     runner: spawnRunner,
     dryRun: false,
     repo: null,
+    viewer: null,
+    projectIds: new Set(),
     planned: [],
     retryBaseMs: envBase !== undefined && envBase !== "" ? Number(envBase) : DEFAULT_RETRY_BASE_MS,
     logFile: process.env.CUTWATER_LOG ?? null,
@@ -114,6 +126,21 @@ const GH_READ = new Set([
   "pr list",
   "pr checks",
   "run view",
+]);
+/** `gh project` reads: pinned to the repository owner. */
+const PROJECT_READ = new Set(["list", "view", "field-list", "item-list"]);
+/** `gh project` writes: mutating, so skipped under dry-run. */
+const PROJECT_WRITE = new Set(["create", "link", "field-create", "item-add", "item-edit"]);
+/** Destructive `gh project` verbs cutwater never runs (#8). */
+const PROJECT_FORBIDDEN = new Set([
+  "delete",
+  "close",
+  "unlink",
+  "field-delete",
+  "item-delete",
+  "item-archive",
+  "copy",
+  "mark-template",
 ]);
 const GH_WRITE = new Set(["repo create", "label create"]);
 const GH_FORBIDDEN = new Set([
@@ -177,6 +204,7 @@ export function isMutating(cmd: string, args: string[]): boolean {
   if (cmd !== "gh") return false;
   const verb = `${args[0] ?? ""} ${args[1] ?? ""}`;
   if (GH_WRITE.has(verb)) return true;
+  if (args[0] === "project") return PROJECT_WRITE.has(args[1] ?? "");
   if (args[0] === "api") return parseApiArgs(args).method !== "GET";
   return false;
 }
@@ -185,8 +213,19 @@ function forbidden(message: string): CutwaterError {
   return new CutwaterError("FORBIDDEN", message);
 }
 
+/** What a call may touch beyond the pinned repository. */
+export interface PinScope {
+  viewer?: string | null;
+  projectIds?: ReadonlySet<string>;
+}
+
 /** Refuse any command outside the allowlist. Throws FORBIDDEN. */
-export function assertAllowed(cmd: string, args: string[], pinnedRepo: string | null): void {
+export function assertAllowed(
+  cmd: string,
+  args: string[],
+  pinnedRepo: string | null,
+  scope: PinScope = {},
+): void {
   if (cmd === "git") {
     const sub = args[0] ?? "";
     if (!GIT_ALLOWED.has(sub)) throw forbidden(`git ${sub} is not on cutwater's allowlist`);
@@ -209,6 +248,11 @@ export function assertAllowed(cmd: string, args: string[], pinnedRepo: string | 
   const verb = `${args[0] ?? ""} ${args[1] ?? ""}`;
   if (GH_FORBIDDEN.has(verb)) throw forbidden(`gh ${verb} is never run by cutwater`);
   if (args[0] === "--version") return;
+
+  if (args[0] === "project") {
+    assertProjectCall(args, pinnedRepo, scope);
+    return;
+  }
 
   if (args[0] === "api") {
     const { method, path } = parseApiArgs(args);
@@ -246,6 +290,52 @@ export function assertAllowed(cmd: string, args: string[], pinnedRepo: string | 
   if (repoFlag === null) throw forbidden(`gh ${verb} must be pinned with --repo`);
   if (pinnedRepo !== null && repoFlag.toLowerCase() !== pinnedRepo.toLowerCase()) {
     throw forbidden(`refusing to touch ${repoFlag}: this run is pinned to ${pinnedRepo}`);
+  }
+}
+
+/**
+ * `gh project` takes `--owner`, not `--repo`, so it gets its own pin: the
+ * owner must be the pinned repository's owner, and `link` must also name the
+ * pinned repository. Destructive verbs are refused outright. Fails closed when
+ * no repository is pinned yet.
+ */
+function assertProjectCall(args: string[], pinnedRepo: string | null, scope: PinScope): void {
+  const verb = args[1] ?? "";
+  if (PROJECT_FORBIDDEN.has(verb)) throw forbidden(`gh project ${verb} is never run by cutwater`);
+  if (!PROJECT_READ.has(verb) && !PROJECT_WRITE.has(verb)) {
+    throw forbidden(`gh project ${verb} is not on cutwater's allowlist`);
+  }
+  if (pinnedRepo === null) throw forbidden(`gh project ${verb} needs a pinned repository`);
+  const pinnedOwner = (pinnedRepo.split("/")[0] ?? "").toLowerCase();
+
+  if (verb === "item-edit") {
+    // item-edit identifies the Project by id and does not accept --owner.
+    if (singleFlagValue(args, "--owner") !== null) {
+      throw forbidden("gh project item-edit does not take --owner");
+    }
+    const projectId = singleFlagValue(args, "--project-id");
+    if (projectId === null) throw forbidden("gh project item-edit must pass --project-id");
+    if (!scope.projectIds?.has(projectId)) {
+      throw forbidden(
+        `refusing to edit items of project ${projectId}: it is not verified as ${pinnedOwner}'s`,
+      );
+    }
+    return;
+  }
+
+  const owner = singleFlagValue(args, "--owner");
+  if (owner === null) throw forbidden(`gh project ${verb} must be pinned with --owner`);
+  const resolved = owner === "@me" ? (scope.viewer ?? null) : owner;
+  if (resolved === null || resolved.toLowerCase() !== pinnedOwner) {
+    throw forbidden(`refusing to touch projects of ${owner}: this run is pinned to ${pinnedRepo}`);
+  }
+  if (verb === "link") {
+    const repo = singleFlagValue(args, "--repo", "-R");
+    if (repo === null || repo.toLowerCase() !== pinnedRepo.toLowerCase()) {
+      throw forbidden(
+        `refusing to link ${repo ?? "no repository"}: this run is pinned to ${pinnedRepo}`,
+      );
+    }
   }
 }
 
@@ -317,7 +407,7 @@ export async function run(
   args: string[],
   opts: CallOptions = {},
 ): Promise<RunResult> {
-  assertAllowed(cmd, args, ctx.repo);
+  assertAllowed(cmd, args, ctx.repo, { viewer: ctx.viewer, projectIds: ctx.projectIds });
   const mutating = isMutating(cmd, args);
   if (mutating && ctx.dryRun) {
     ctx.planned.push({ cmd, args });
