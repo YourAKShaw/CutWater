@@ -126,7 +126,7 @@ test("pins gh project reads and writes to the repository owner (security)", () =
   for (const verb of ["list", "view", "field-list", "item-list"]) {
     assertAllowed("gh", ["project", verb, "1", "--owner", "O", "--format", "json"], "o/r");
   }
-  for (const verb of ["create", "field-create", "item-add"]) {
+  for (const verb of ["create", "field-create"]) {
     assertAllowed("gh", ["project", verb, "1", "--owner=o"], "o/r");
   }
   forbidden(() => assertAllowed("gh", ["project", "view", "1"], "o/r"));
@@ -156,6 +156,23 @@ test("project link must name the pinned repository (security)", () => {
   forbidden(() => assertAllowed("gh", link, "o/r"));
   forbidden(() => assertAllowed("gh", [...link, "--repo", "o/other"], "o/r"));
   forbidden(() => assertAllowed("gh", [...link, "--repo", "o/r", "-R", "o/other"], "o/r"));
+});
+
+test("item-add accepts only issues and PRs of the pinned repository (security)", () => {
+  const add = ["project", "item-add", "1", "--owner", "o", "--url"];
+  assertAllowed("gh", [...add, "https://github.com/o/r/issues/7"], "o/r");
+  assertAllowed("gh", [...add, "https://github.com/O/R/pull/8"], "o/r");
+  forbidden(() => assertAllowed("gh", [...add, "https://github.com/evil/x/issues/1"], "o/r"));
+  forbidden(() => assertAllowed("gh", [...add, "https://github.com/o/r/issues/7/extra"], "o/r"));
+  forbidden(() => assertAllowed("gh", [...add, "https://evil.example/o/r/issues/7"], "o/r"));
+  forbidden(() => assertAllowed("gh", ["project", "item-add", "1", "--owner", "o"], "o/r"));
+  forbidden(() =>
+    assertAllowed(
+      "gh",
+      [...add, "https://github.com/o/r/issues/7", "--url", "https://github.com/evil/x/issues/1"],
+      "o/r",
+    ),
+  );
 });
 
 test("item-edit is allowed only for project ids verified as the owner's (security)", () => {

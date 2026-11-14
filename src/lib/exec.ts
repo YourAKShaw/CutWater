@@ -329,6 +329,16 @@ function assertProjectCall(args: string[], pinnedRepo: string | null, scope: Pin
   if (resolved === null || resolved.toLowerCase() !== pinnedOwner) {
     throw forbidden(`refusing to touch projects of ${owner}: this run is pinned to ${pinnedRepo}`);
   }
+  if (verb === "item-add") {
+    const url = singleFlagValue(args, "--url");
+    const match =
+      url === null ? null : /^https:\/\/github\.com\/([^/]+\/[^/]+)\/(issues|pull)\/\d+$/.exec(url);
+    if (match?.[1]?.toLowerCase() !== pinnedRepo.toLowerCase()) {
+      throw forbidden(
+        `refusing to add ${url ?? "no URL"}: only issues and pull requests of ${pinnedRepo}`,
+      );
+    }
+  }
   if (verb === "link") {
     const repo = singleFlagValue(args, "--repo", "-R");
     if (repo === null || repo.toLowerCase() !== pinnedRepo.toLowerCase()) {
