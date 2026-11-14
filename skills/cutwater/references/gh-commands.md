@@ -53,10 +53,10 @@ Verified on gh 2.100.0 on 2026-11-14 against a throwaway user-owned Project (#6)
 | `gh project field-list P --owner O --format json` | `{fields[{id, name, type, options?[{id, name}]}], totalCount}`. A new Project has 13 built-in fields, including `Status` (Todo, In Progress, Done) | Read; default `--limit 30` | — |
 | `gh project field-create P --owner O --name X --data-type TEXT\|NUMBER\|DATE\|SINGLE_SELECT [--single-select-options "A,B"] --format json` | `{id, name, type, options?}` | **Not idempotent**: a duplicate name fails | `GraphQL: Name has already been taken (createProjectV2Field)`. `ITERATION` is rejected by the flag: `valid values are {TEXT\|SINGLE_SELECT\|DATE\|NUMBER}` |
 | `gh project item-add P --owner O --url URL --format json` | `{id, title, type: Issue\|PullRequest, url, body}` | **Idempotent**: a repeat add returns the same item id | `resource not found, please check the URL` |
-| `gh project item-list P --owner O --format json --limit N` | `{items[{id, title, content{…}, status, labels, milestone, assignees, repository, <field name>…}], totalCount}` | Read; default `--limit 30`, gh pages internally | — |
+| `gh project item-list P --owner O --format json --limit N` | `{items[{id, title, content{…}, status, labels, milestone, assignees, repository}], totalCount}` (observed with only built-in fields set; other fields with a value add their own keys, not captured) | Read; default `--limit 30`, gh pages internally | — |
 | `gh project item-edit --id ITEM --project-id PID --field-id FID --single-select-option-id OID --format json` | Same as `item-add` | Idempotent (sets a value) | `GraphQL: The single select option Id does not belong to the field (updateProjectV2ItemFieldValue)` |
 | `gh project edit P --owner O --readme R --description D --visibility PUBLIC\|PRIVATE --format json` | Same as `view` | Idempotent | — |
-| `gh project delete P --owner O --format json` | `{number, title, …}` | A second delete fails with the not-found error above | — |
+| `gh project delete P --owner O --format json` | Includes `number` and `title` (full shape not captured) | A second delete fails with the not-found error above | — |
 
 Beyond the `gh project` flags:
 
