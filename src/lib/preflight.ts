@@ -33,6 +33,7 @@ export interface RepoInfo {
   visibility: string;
   hasWikiEnabled: boolean;
   isEmpty: boolean;
+  isInOrganization: boolean;
 }
 
 /** Parse owner/name from https, ssh and scp-style github.com remote URLs. */
@@ -118,7 +119,7 @@ export async function repoView(ctx: ExecContext, repo: string): Promise<RepoInfo
       "view",
       repo,
       "--json",
-      "nameWithOwner,defaultBranchRef,visibility,hasWikiEnabled,isEmpty",
+      "nameWithOwner,defaultBranchRef,visibility,hasWikiEnabled,isEmpty,isInOrganization",
     ],
     {
       allowFailure: true,
@@ -136,6 +137,7 @@ export async function repoView(ctx: ExecContext, repo: string): Promise<RepoInfo
     visibility: string;
     hasWikiEnabled: boolean;
     isEmpty: boolean;
+    isInOrganization?: boolean;
   };
   return {
     nameWithOwner: data.nameWithOwner,
@@ -143,6 +145,7 @@ export async function repoView(ctx: ExecContext, repo: string): Promise<RepoInfo
     visibility: (data.visibility ?? "").toLowerCase(),
     hasWikiEnabled: Boolean(data.hasWikiEnabled),
     isEmpty: Boolean(data.isEmpty),
+    isInOrganization: Boolean(data.isInOrganization),
   };
 }
 
@@ -177,6 +180,41 @@ export const SCOPE_NEEDS: Record<string, string> = {
   project: "the optional Projects board",
 };
 
+/**
+ * What the token can do with Projects. `unknown` means gh reported no OAuth
+ * scopes (a fine-grained token), so only a live probe can tell.
+ */
+export type ProjectAccess = "write" | "read" | "none" | "unknown";
+
+export function projectAccessFromScopes(scopes: string[] | null): ProjectAccess {
+  if (scopes === null) return "unknown";
+  if (scopes.includes("project")) return "write";
+  if (scopes.includes("read:project")) return "read";
+  return "none";
+}
+
+export const PROJECT_SCOPE_FIX =
+  "Run `gh auth refresh -s project` yourself: it opens a browser or device flow, and cutwater never widens a token.";
+
+/** Refuse a Project read or write the token cannot do (exit 3), before calling GitHub. */
+export function requireProjectAccess(access: ProjectAccess, need: "read" | "write"): void {
+  if (access === "write" || access === "unknown") return;
+  if (access === "read" && need === "read") return;
+  throw new CutwaterError(
+    "SCOPE",
+    access === "read"
+      ? "The token has only read:project, so Project writes are refused."
+      : "The token has no Projects scope.",
+    { problem: "SCOPE_PROJECT" },
+    PROJECT_SCOPE_FIX,
+  );
+}
+
+export interface PreflightOptions {
+  /** Project access the caller needs; only then are Projects scopes checked. */
+  needsProject?: "read" | "write";
+}
+
 export interface PreflightProblem {
   code: string;
   message: string;
@@ -191,12 +229,15 @@ export interface PreflightResult {
   repo: string | null;
   repoInfo: RepoInfo | null;
   missingScopes: string[];
+  /** Set only when Projects were asked for. */
+  projectAccess: ProjectAccess | null;
   problems: PreflightProblem[];
 }
 
 export async function preflight(
   ctx: ExecContext,
   explicitRepo: string | null,
+  options: PreflightOptions = {},
 ): Promise<PreflightResult> {
   const problems: PreflightProblem[] = [];
   const gitState = await gitInfo(ctx);
@@ -254,7 +295,15 @@ export async function preflight(
       : Object.keys(SCOPE_NEEDS).filter(
           (scope) => scope !== "project" && !auth.scopes?.includes(scope),
         );
-  const blocking = problems.some((problem) => ["AUTH", "NO_GH"].includes(problem.code));
+  let projectAccess: ProjectAccess | null = null;
+  if (options.needsProject !== undefined && auth.authenticated) {
+    projectAccess = await checkProjects(ctx, auth, repo, info, options.needsProject, problems);
+    if (projectAccess === "none" || (projectAccess === "read" && options.needsProject === "write"))
+      missingScopes.push("project");
+  }
+  const blocking = problems.some((problem) =>
+    ["AUTH", "NO_GH", "SCOPE_PROJECT"].includes(problem.code),
+  );
   return {
     ok: !blocking,
     git: gitState,
@@ -263,6 +312,54 @@ export async function preflight(
     repo,
     repoInfo: info,
     missingScopes,
+    projectAccess,
     problems,
   };
+}
+
+async function checkProjects(
+  ctx: ExecContext,
+  auth: AuthInfo,
+  repo: string | null,
+  info: RepoInfo | null,
+  need: "read" | "write",
+  problems: PreflightProblem[],
+): Promise<ProjectAccess> {
+  const access = projectAccessFromScopes(auth.scopes);
+  if (access === "none" || (access === "read" && need === "write")) {
+    problems.push({
+      code: "SCOPE_PROJECT",
+      message:
+        access === "read"
+          ? "The token has only read:project: Project reads work, writes will be refused."
+          : "The token lacks the project scope that Projects need.",
+      remediation: PROJECT_SCOPE_FIX,
+    });
+  }
+  const owner = repo?.split("/")[0];
+  if (access === "unknown" && owner !== undefined) {
+    // One cheap read tells whether a fine-grained token can see the owner's Projects.
+    const probe = await gh(ctx, ["project", "list", "--owner", owner, "--limit", "1"], {
+      allowFailure: true,
+    });
+    problems.push({
+      code: "PROJECT_SCOPE_UNKNOWN",
+      message:
+        probe.code === 0
+          ? "❔ Projects scope unknown (fine-grained token?); reading the owner's Projects works."
+          : `❔ Projects scope unknown (fine-grained token?), and reading the owner's Projects failed: ${probe.stderr.trim().split("\n")[0]}`,
+      remediation:
+        "If a Project write later fails with a permission error, use a classic token: " +
+        PROJECT_SCOPE_FIX,
+    });
+  }
+  if (info?.isInOrganization) {
+    problems.push({
+      code: "PROJECT_ORG",
+      message: "The repository is organisation-owned.",
+      remediation:
+        "Organisation policy may disallow Projects, or you may lack the organisation permission to create one; ask an owner if a Project write is refused.",
+    });
+  }
+  return access;
 }

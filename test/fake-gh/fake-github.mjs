@@ -104,8 +104,10 @@ export function handle(state, args, { input = "", cwd = process.cwd() } = {}) {
       visibility: repo.visibility,
       hasWikiEnabled: repo.hasWikiEnabled,
       isEmpty: repo.isEmpty,
+      isInOrganization: Boolean(repo.isInOrganization),
     });
   }
+  if (verb === "project list") return json({ projects: [], totalCount: 0 });
   if (verb === "repo create") {
     const name = args[2];
     if (state.repos[name])

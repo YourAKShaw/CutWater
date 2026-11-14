@@ -3256,7 +3256,7 @@ async function repoView(ctx, repo) {
       "view",
       repo,
       "--json",
-      "nameWithOwner,defaultBranchRef,visibility,hasWikiEnabled,isEmpty"
+      "nameWithOwner,defaultBranchRef,visibility,hasWikiEnabled,isEmpty,isInOrganization"
     ],
     {
       allowFailure: true
@@ -3273,7 +3273,8 @@ async function repoView(ctx, repo) {
     defaultBranch: data.defaultBranchRef?.name || null,
     visibility: (data.visibility ?? "").toLowerCase(),
     hasWikiEnabled: Boolean(data.hasWikiEnabled),
-    isEmpty: Boolean(data.isEmpty)
+    isEmpty: Boolean(data.isEmpty),
+    isInOrganization: Boolean(data.isInOrganization)
   };
 }
 function resolveRepo(explicit, root, originRepo) {
@@ -3291,7 +3292,14 @@ var SCOPE_NEEDS = {
   workflow: "pushing files under .github/workflows",
   project: "the optional Projects board"
 };
-async function preflight(ctx, explicitRepo) {
+function projectAccessFromScopes(scopes) {
+  if (scopes === null) return "unknown";
+  if (scopes.includes("project")) return "write";
+  if (scopes.includes("read:project")) return "read";
+  return "none";
+}
+var PROJECT_SCOPE_FIX = "Run `gh auth refresh -s project` yourself: it opens a browser or device flow, and cutwater never widens a token.";
+async function preflight(ctx, explicitRepo, options = {}) {
   const problems = [];
   const gitState = await gitInfo(ctx);
   if (!gitState.insideWorkTree) {
@@ -3342,7 +3350,15 @@ async function preflight(ctx, explicitRepo) {
   const missingScopes = auth.scopes === null ? [] : Object.keys(SCOPE_NEEDS).filter(
     (scope) => scope !== "project" && !auth.scopes?.includes(scope)
   );
-  const blocking = problems.some((problem) => ["AUTH", "NO_GH"].includes(problem.code));
+  let projectAccess = null;
+  if (options.needsProject !== void 0 && auth.authenticated) {
+    projectAccess = await checkProjects(ctx, auth, repo, info, options.needsProject, problems);
+    if (projectAccess === "none" || projectAccess === "read" && options.needsProject === "write")
+      missingScopes.push("project");
+  }
+  const blocking = problems.some(
+    (problem) => ["AUTH", "NO_GH", "SCOPE_PROJECT"].includes(problem.code)
+  );
   return {
     ok: !blocking,
     git: gitState,
@@ -3351,8 +3367,38 @@ async function preflight(ctx, explicitRepo) {
     repo,
     repoInfo: info,
     missingScopes,
+    projectAccess,
     problems
   };
+}
+async function checkProjects(ctx, auth, repo, info, need, problems) {
+  const access = projectAccessFromScopes(auth.scopes);
+  if (access === "none" || access === "read" && need === "write") {
+    problems.push({
+      code: "SCOPE_PROJECT",
+      message: access === "read" ? "The token has only read:project: Project reads work, writes will be refused." : "The token lacks the project scope that Projects need.",
+      remediation: PROJECT_SCOPE_FIX
+    });
+  }
+  const owner = repo?.split("/")[0];
+  if (access === "unknown" && owner !== void 0) {
+    const probe = await gh(ctx, ["project", "list", "--owner", owner, "--limit", "1"], {
+      allowFailure: true
+    });
+    problems.push({
+      code: "PROJECT_SCOPE_UNKNOWN",
+      message: probe.code === 0 ? "❔ Projects scope unknown (fine-grained token?); reading the owner's Projects works." : `❔ Projects scope unknown (fine-grained token?), and reading the owner's Projects failed: ${probe.stderr.trim().split("\n")[0]}`,
+      remediation: "If a Project write later fails with a permission error, use a classic token: " + PROJECT_SCOPE_FIX
+    });
+  }
+  if (info?.isInOrganization) {
+    problems.push({
+      code: "PROJECT_ORG",
+      message: "The repository is organisation-owned.",
+      remediation: "Organisation policy may disallow Projects, or you may lack the organisation permission to create one; ask an owner if a Project write is refused."
+    });
+  }
+  return access;
 }
 
 // src/cli.ts
@@ -3371,7 +3417,8 @@ var HELP = `cutwater ${VERSION}: helper for the cutwater Agent Skill
 Usage: node scripts/cutwater.mjs <command> [options]
 
 Setup (Phase 0)
-  preflight                         git, gh auth, login, repository, token scopes
+  preflight [--needs project|read:project]
+                                    git, gh auth, login, repository, token scopes
   audit [--offline] [--accept-org-defaults]
                                     check items A1-A17 and classify the repository
   defaults [--out answers.json]     interview defaults detected from the repository
@@ -3851,7 +3898,12 @@ async function run2(argv) {
   const env = { ctx, args, out, root: info.root ?? cwd };
   switch (command) {
     case "preflight": {
-      const result = await preflight(ctx, stringFlag(args, "repo"));
+      const needs = stringFlag(args, "needs");
+      if (needs !== null && needs !== "project" && needs !== "read:project")
+        throw new CutwaterError("USAGE", "--needs takes project or read:project");
+      const result = await preflight(ctx, stringFlag(args, "repo"), {
+        ...needs === null ? {} : { needsProject: needs === "project" ? "write" : "read" }
+      });
       print(
         out,
         result,
@@ -3862,7 +3914,7 @@ async function run2(argv) {
             (scope) => `⚠️  missing scope "${scope}"; run: gh auth refresh -s ${scope}`
           ),
           ...result.problems.map(
-            (problem) => `${problem.code === "AUTH" || problem.code === "NO_GH" ? "⛔" : "ℹ️ "} ${problem.message} ${problem.remediation}`
+            (problem) => `${["AUTH", "NO_GH", "SCOPE_PROJECT"].includes(problem.code) ? "⛔" : "ℹ️ "} ${problem.message} ${problem.remediation}`
           )
         ].join("\n")
       );

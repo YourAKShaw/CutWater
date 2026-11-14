@@ -13,7 +13,8 @@ import { isMutating } from "../src/lib/exec.ts";
 import { listLabels } from "../src/lib/labels.ts";
 import { readManifest } from "../src/lib/manifest.ts";
 import { computePlan } from "../src/lib/plan.ts";
-import { preflight } from "../src/lib/preflight.ts";
+import { CutwaterError, exitCodeFor } from "../src/lib/errors.ts";
+import { preflight, requireProjectAccess } from "../src/lib/preflight.ts";
 import { desiredRuleset, ensureRuleset } from "../src/lib/ruleset.ts";
 import { MANIFEST_PATH } from "../src/version.ts";
 import { sandbox, writeFiles, type Sandbox } from "./helpers.ts";
@@ -363,4 +364,74 @@ test("apply lists the CodeRabbit next steps only when CodeRabbit is chosen", asy
       assert.match(applied.nextSteps[0] ?? "", /references\/coderabbit\.md/);
     }
   }
+});
+
+test("preflight never mentions Projects unless they are chosen", async () => {
+  const box = sandbox();
+  const result = await preflight(box.ctx, null);
+  assert.equal(result.projectAccess, null);
+  assert.ok(!result.problems.some((problem) => problem.code.startsWith("PROJECT")));
+  assert.ok(!box.state.calls.some((args) => args[0] === "project"));
+});
+
+test("preflight blocks a classic token without the project scope", async () => {
+  const box = sandbox();
+  const result = await preflight(box.ctx, null, { needsProject: "write" });
+  assert.equal(result.ok, false);
+  assert.equal(result.projectAccess, "none");
+  assert.deepEqual(result.missingScopes, ["project"]);
+  const problem = result.problems.find((p) => p.code === "SCOPE_PROJECT");
+  assert.match(problem?.remediation ?? "", /gh auth refresh -s project.*browser or device flow/);
+});
+
+test("read:project allows reads and refuses writes up front", async () => {
+  const box = sandbox();
+  box.state.scopes = ["repo", "workflow", "read:project"];
+  const read = await preflight(box.ctx, null, { needsProject: "read" });
+  assert.equal(read.ok, true);
+  assert.equal(read.projectAccess, "read");
+  const write = await preflight(box.ctx, null, { needsProject: "write" });
+  assert.equal(write.ok, false);
+  assert.throws(
+    () => requireProjectAccess("read", "write"),
+    (error: unknown) =>
+      error instanceof CutwaterError &&
+      exitCodeFor(error.code) === 3 &&
+      /gh auth refresh -s project/.test(error.remediation),
+  );
+  requireProjectAccess("read", "read");
+  box.state.scopes = ["repo", "workflow", "project"];
+  const full = await preflight(box.ctx, null, { needsProject: "write" });
+  assert.equal(full.ok, true);
+  assert.equal(full.projectAccess, "write");
+  assert.deepEqual(full.missingScopes, []);
+});
+
+test("a fine-grained token is unknown and gets one cheap read probe", async () => {
+  const box = sandbox();
+  box.state.scopes = null;
+  const result = await preflight(box.ctx, null, { needsProject: "write" });
+  assert.equal(result.ok, true);
+  assert.equal(result.projectAccess, "unknown");
+  assert.match(
+    result.problems.find((p) => p.code === "PROJECT_SCOPE_UNKNOWN")?.message ?? "",
+    /❔/,
+  );
+  assert.deepEqual(
+    box.state.calls.filter((args) => args[0] === "project"),
+    [["project", "list", "--owner", "octocat", "--limit", "1"]],
+  );
+});
+
+test("an organisation-owned repository gets the org policy note", async () => {
+  const box = sandbox();
+  box.state.scopes = ["repo", "workflow", "project"];
+  const repo = box.state.repos["octocat/demo"];
+  assert.ok(repo);
+  repo.isInOrganization = true;
+  const result = await preflight(box.ctx, null, { needsProject: "write" });
+  assert.match(
+    result.problems.find((p) => p.code === "PROJECT_ORG")?.remediation ?? "",
+    /organisation/,
+  );
 });

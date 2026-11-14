@@ -73,7 +73,8 @@ const HELP = `cutwater ${VERSION}: helper for the cutwater Agent Skill
 Usage: node scripts/cutwater.mjs <command> [options]
 
 Setup (Phase 0)
-  preflight                         git, gh auth, login, repository, token scopes
+  preflight [--needs project|read:project]
+                                    git, gh auth, login, repository, token scopes
   audit [--offline] [--accept-org-defaults]
                                     check items A1-A17 and classify the repository
   defaults [--out answers.json]     interview defaults detected from the repository
@@ -591,7 +592,12 @@ async function run(argv: string[]): Promise<number> {
 
   switch (command) {
     case "preflight": {
-      const result = await preflight(ctx, stringFlag(args, "repo"));
+      const needs = stringFlag(args, "needs");
+      if (needs !== null && needs !== "project" && needs !== "read:project")
+        throw new CutwaterError("USAGE", "--needs takes project or read:project");
+      const result = await preflight(ctx, stringFlag(args, "repo"), {
+        ...(needs === null ? {} : { needsProject: needs === "project" ? "write" : "read" }),
+      });
       print(out, result, () =>
         [
           `${result.ok ? "✅" : "⛔"} preflight: ${result.login ? `@${result.login}` : "not logged in"}, ${result.repo ?? "no GitHub repository"}${result.repoInfo ? ` (${result.repoInfo.visibility}, default branch ${result.repoInfo.defaultBranch ?? "unset"}${result.repoInfo.isEmpty ? ", empty" : ""})` : ""}`,
@@ -601,7 +607,7 @@ async function run(argv: string[]): Promise<number> {
           ),
           ...result.problems.map(
             (problem) =>
-              `${problem.code === "AUTH" || problem.code === "NO_GH" ? "⛔" : "ℹ️ "} ${problem.message} ${problem.remediation}`,
+              `${["AUTH", "NO_GH", "SCOPE_PROJECT"].includes(problem.code) ? "⛔" : "ℹ️ "} ${problem.message} ${problem.remediation}`,
           ),
         ].join("\n"),
       );
