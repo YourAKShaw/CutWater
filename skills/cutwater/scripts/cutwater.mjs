@@ -556,8 +556,9 @@ function parseProjectArgs(verb, args) {
     let value = "";
     if (spec.flags[name]) {
       value = eq === -1 ? args[++i] ?? "" : arg.slice(eq + 1);
-      if (value === "" || value.startsWith("-")) {
-        throw forbidden(`gh project ${verb}: ${name} needs a value that does not start with -`);
+      if (value === "") throw forbidden(`gh project ${verb}: ${name} needs a value`);
+      if (eq === -1 && value.startsWith("-")) {
+        throw forbidden(`gh project ${verb}: pass a value starting with - as ${name}=VALUE`);
       }
     } else if (eq !== -1) {
       throw forbidden(`gh project ${verb}: ${name} takes no value`);

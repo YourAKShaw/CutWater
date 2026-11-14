@@ -388,8 +388,11 @@ function parseProjectArgs(verb: string, args: string[]): Map<string, string> {
     let value = "";
     if (spec.flags[name]) {
       value = eq === -1 ? (args[++i] ?? "") : arg.slice(eq + 1);
-      if (value === "" || value.startsWith("-")) {
-        throw forbidden(`gh project ${verb}: ${name} needs a value that does not start with -`);
+      if (value === "") throw forbidden(`gh project ${verb}: ${name} needs a value`);
+      // A separate value starting with - may be a flag gh would read differently;
+      // an attached one (`--number=-1`) is bound to its flag and cannot hide one.
+      if (eq === -1 && value.startsWith("-")) {
+        throw forbidden(`gh project ${verb}: pass a value starting with - as ${name}=VALUE`);
       }
     } else if (eq !== -1) {
       throw forbidden(`gh project ${verb}: ${name} takes no value`);

@@ -281,6 +281,14 @@ test("item-edit refuses by-name and draft edits, which bypass the project id (se
   const projectIds = new Set(["PVT_ok"]);
   assertAllowed("gh", [...base, "--field-id", "F", "--text", "x"], "o/r", { projectIds });
   assertAllowed("gh", [...base, "--field-id", "F", "--clear"], "o/r", { projectIds });
+  // An attached dash-leading value is bound to its flag; a separate one is refused.
+  assertAllowed("gh", [...base, "--field-id", "F", "--number=-1"], "o/r", { projectIds });
+  forbidden(() =>
+    assertAllowed("gh", [...base, "--field-id", "F", "--number", "-1"], "o/r", { projectIds }),
+  );
+  forbidden(() =>
+    assertAllowed("gh", [...base, "--field-id", "F", "--text="], "o/r", { projectIds }),
+  );
   for (const extra of [
     ["--title", "x"],
     ["--body=x"],
