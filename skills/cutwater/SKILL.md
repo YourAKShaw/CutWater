@@ -68,7 +68,8 @@ Run `cw preflight`. Then:
 - **Not a git repository:** offer `git init`. This is a confirmation gate.
 - **gh missing or logged out (exit 3):** print the fix (`gh auth login`) and **stop**.
 - **No GitHub repository:** continue to the interview; setup offers to create one.
-- **Missing scopes:** tell the user which feature needs which scope (`workflow` to push workflow files, `project` for Projects) and the `gh auth refresh -s <scope>` command.
+- **Missing scopes:** tell the user which feature needs which scope (`workflow` to push workflow files) and the `gh auth refresh -s <scope>` command. The user runs it: it opens a browser or device flow.
+- **Projects chosen:** run `cw preflight --needs project` (`read:project` for audits only). `SCOPE_PROJECT` blocks with exit 3; `❔ unknown` (fine-grained token) is probed with one read; an org repository gets a policy note.
 
 ## Phase 0: audit, interview, scaffold
 

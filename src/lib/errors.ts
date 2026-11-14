@@ -54,11 +54,11 @@ export class CutwaterError extends Error {
   readonly remediation: string;
   readonly details: unknown;
 
-  constructor(code: ErrorCode, message: string, details?: unknown) {
+  constructor(code: ErrorCode, message: string, details?: unknown, remediation?: string) {
     super(message);
     this.name = "CutwaterError";
     this.code = code;
-    this.remediation = REMEDIATION[code];
+    this.remediation = remediation ?? REMEDIATION[code];
     this.details = details;
   }
 
@@ -130,6 +130,7 @@ export function classifyGhFailure(stderr: string): GhFailure {
   if (
     status === 404 ||
     text.includes("could not resolve to a repository") ||
+    text.includes("could not resolve to a projectv2") ||
     text.includes("not found")
   ) {
     return { code: "NOT_FOUND", transient: false, status };
@@ -144,4 +145,42 @@ export function classifyGhFailure(stderr: string): GhFailure {
   // A failure with no recognisable cause is treated as a permanent remote
   // error: retrying unknown failures could repeat a partial write.
   return { code: "REMOTE", transient: false, status };
+}
+
+/** `gh auth refresh` opens a browser or device flow, so only the user can run it. */
+const REFRESH_NOTE =
+  "It opens a browser or device flow, so run it yourself; cutwater never widens a token.";
+
+/**
+ * A remediation tailored to the failure, or null to keep the generic one.
+ * Covers the Projects scope errors captured in the #6 spike. The org and
+ * fine-grained token hints apply only to `gh project` calls (`args`), so
+ * label, ruleset and other failures keep the generic permission fix.
+ */
+export function remediationFor(
+  stderr: string,
+  failure: GhFailure,
+  args: readonly string[] = [],
+): string | null {
+  if (failure.code !== "SCOPE") return null;
+  const missing = /missing required scopes?\s*\[([^\]]+)\]/i.exec(stderr)?.[1];
+  if (missing !== undefined) {
+    const scopes = missing
+      .split(/[\s,]+/)
+      .filter((scope) => scope !== "")
+      // `project` includes `read:project`, so ask for the wider one once.
+      .map((scope) => (scope === "read:project" ? "project" : scope));
+    return `Run \`gh auth refresh -s ${[...new Set(scopes)].join(",")}\`. ${REFRESH_NOTE}`;
+  }
+  if (args[0] !== "project") return null;
+  if (/organi[sz]ation/i.test(stderr)) {
+    return "The organisation may disallow Projects, or your account may lack the organisation permission to create one. Ask an organisation owner.";
+  }
+  if (/personal access token/i.test(stderr)) {
+    return (
+      "A fine-grained token cannot reach this Project. Use a classic token with the `project` scope (`gh auth refresh -s project`). " +
+      REFRESH_NOTE
+    );
+  }
+  return null;
 }

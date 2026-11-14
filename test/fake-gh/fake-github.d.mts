@@ -15,6 +15,7 @@ export interface FakeRepo {
   hasWikiEnabled: boolean;
   wikiInitialized: boolean;
   isEmpty: boolean;
+  isInOrganization?: boolean;
   labels: FakeLabel[];
   rulesets: Record<string, unknown>[];
   reactions: { issue: number; content: string }[];
