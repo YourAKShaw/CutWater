@@ -18,7 +18,7 @@
  */
 import { spawn } from "node:child_process";
 import { appendFileSync } from "node:fs";
-import { CutwaterError, classifyGhFailure } from "./errors.ts";
+import { CutwaterError, classifyGhFailure, remediationFor } from "./errors.ts";
 
 export interface RunResult {
   code: number;
@@ -575,6 +575,7 @@ export async function run(
         status: failure.status,
         stderr: result.stderr.trim().slice(0, 2000),
       },
+      remediationFor(result.stderr, failure) ?? undefined,
     );
   }
 }

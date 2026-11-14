@@ -34,11 +34,11 @@ var CutwaterError = class extends Error {
   code;
   remediation;
   details;
-  constructor(code, message, details) {
+  constructor(code, message, details, remediation) {
     super(message);
     this.name = "CutwaterError";
     this.code = code;
-    this.remediation = REMEDIATION[code];
+    this.remediation = remediation ?? REMEDIATION[code];
     this.details = details;
   }
   toJSON() {
@@ -85,7 +85,7 @@ function classifyGhFailure(stderr) {
   if (status2 === 403 || text.includes("resource not accessible") || text.includes("missing required scope") || text.includes("requires the") || text.includes("must have admin rights")) {
     return { code: "SCOPE", transient: false, status: status2 };
   }
-  if (status2 === 404 || text.includes("could not resolve to a repository") || text.includes("not found")) {
+  if (status2 === 404 || text.includes("could not resolve to a repository") || text.includes("could not resolve to a projectv2") || text.includes("not found")) {
     return { code: "NOT_FOUND", transient: false, status: status2 };
   }
   if (status2 === 409 || text.includes("already exists") || text.includes("already_exists")) {
@@ -96,6 +96,22 @@ function classifyGhFailure(stderr) {
     return { code: "REMOTE", transient: true, status: status2 };
   }
   return { code: "REMOTE", transient: false, status: status2 };
+}
+var REFRESH_NOTE = "It opens a browser or device flow, so run it yourself; cutwater never widens a token.";
+function remediationFor(stderr, failure) {
+  if (failure.code !== "SCOPE") return null;
+  const missing = /missing required scopes?\s*\[([^\]]+)\]/i.exec(stderr)?.[1];
+  if (missing !== void 0) {
+    const scopes = missing.split(/[\s,]+/).filter((scope) => scope !== "").map((scope) => scope === "read:project" ? "project" : scope);
+    return `Run \`gh auth refresh -s ${[...new Set(scopes)].join(",")}\`. ${REFRESH_NOTE}`;
+  }
+  if (/organi[sz]ation/i.test(stderr) && /project/i.test(stderr)) {
+    return "The organisation may disallow Projects, or your account may lack the organisation permission to create one. Ask an organisation owner.";
+  }
+  if (/personal access token/i.test(stderr)) {
+    return "A fine-grained token cannot reach this Project. Use a classic token with the `project` scope (`gh auth refresh -s project`). " + REFRESH_NOTE;
+  }
+  return null;
 }
 
 // src/lib/detect.ts
@@ -685,7 +701,8 @@ async function run(ctx, cmd, args, opts = {}) {
       {
         status: failure.status,
         stderr: result.stderr.trim().slice(0, 2e3)
-      }
+      },
+      remediationFor(result.stderr, failure) ?? void 0
     );
   }
 }
