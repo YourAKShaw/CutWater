@@ -63,3 +63,104 @@ test("validation lists every problem at once", () => {
       (error.details as { problems: string[] }).problems.length > 5,
   );
 });
+
+function projectDefaults(extra: Partial<Parameters<typeof defaultAnswers>[0]> = {}) {
+  const root = tempDir();
+  writeFiles(root, { "package.json": '{"name":"demo","description":"Demo app"}' });
+  return defaultAnswers({
+    detection: detect(root),
+    login: "octocat",
+    repo: "octocat/demo",
+    remoteExists: true,
+    isEmpty: false,
+    defaultBranch: "main",
+    year: "2026",
+    ...extra,
+  });
+}
+
+function problemsOf(input: unknown): string[] {
+  try {
+    validateAnswers(input);
+    return [];
+  } catch (error) {
+    return (error as CutwaterError & { details: { problems: string[] } }).details.problems;
+  }
+}
+
+test("Projects default off with a create proposal and no new must-ask", () => {
+  const { answers, mustAsk } = projectDefaults();
+  assert.deepEqual(answers.project, {
+    enabled: false,
+    mode: "create",
+    title: "demo Development",
+    owner: "octocat",
+    fields: ["status", "priority"],
+    seed: false,
+  });
+  assert.deepEqual(mustAsk, ["description", "ruleset"]);
+  assert.deepEqual(validateAnswers(answers), answers);
+});
+
+test("a Project already linked to the repository is proposed for adoption", () => {
+  const { answers, notes } = projectDefaults({
+    linkedProjects: [{ number: 3, title: "Demo board" }],
+  });
+  assert.equal(answers.project?.mode, "adopt");
+  assert.equal(answers.project?.number, 3);
+  assert.equal(answers.project?.title, "Demo board");
+  assert.ok(notes.some((note) => note.includes("#3")));
+  const locked = projectDefaults({ projectScopeMissing: true });
+  assert.ok(locked.notes.some((note) => note.includes("🔒 needs `gh auth refresh -s project`")));
+});
+
+test("Projects answers report every problem at once", () => {
+  const { answers } = projectDefaults();
+  const problems = problemsOf({
+    ...answers,
+    project: {
+      enabled: true,
+      mode: "adopt",
+      title: "x".repeat(101),
+      owner: "someone-else",
+      fields: ["status", "sprint"],
+      seed: false,
+      colour: "red",
+    },
+  });
+  for (const expected of [
+    /number is required when project\.mode is adopt/,
+    /title must be at most 100/,
+    /unknown field "sprint"/,
+    /differs from the repository owner octocat/,
+    /project\.colour is not a known field/,
+  ])
+    assert.ok(
+      problems.some((problem) => expected.test(problem)),
+      `${expected}: ${problems.join("; ")}`,
+    );
+  // The owner check applies only when Projects are on.
+  assert.deepEqual(
+    problemsOf({ ...answers, project: { ...answers.project, owner: "someone-else" } }),
+    [],
+  );
+});
+
+test("a v0.1 projectsBoard title maps to a create choice", () => {
+  const { answers } = projectDefaults();
+  const legacy: Record<string, unknown> = { ...answers, projectsBoard: "Old board" };
+  delete legacy.project;
+  const read = validateAnswers(legacy);
+  assert.deepEqual(read.project, {
+    enabled: true,
+    mode: "create",
+    title: "Old board",
+    owner: "octocat",
+    fields: ["status", "priority"],
+    seed: false,
+  });
+  const none: Record<string, unknown> = { ...answers };
+  delete none.project;
+  delete none.projectsBoard;
+  assert.equal(validateAnswers(none).project, undefined);
+});

@@ -32,7 +32,8 @@
 | CI | lint / test / build / release | lint, test and build on; release off | `ci` |
 | Dependencies | Dependabot / Renovate / none | **Dependabot** (native, no app install) | `dependencyBot` |
 | Branching | Default branch name | Existing default, else `main` | `defaultBranch` |
-| Extras | Wiki / Projects board / default-branch ruleset | off / off / **ask** | `wiki`, `projectsBoard`, `ruleset` |
+| Extras | Wiki / default-branch ruleset | off / **ask** | `wiki`, `ruleset` |
+| Projects | Set up a GitHub Project board? On: title, owner, create new or adopt `#N`, fields (`status`, `priority`, optional `size`, `target-date`), seed the backlog | **off**. Title `<name> Development`, owner = repository owner, fields Status and Priority, no seeding. A board already linked to the repository is proposed for adoption | `project.enabled`, `project.mode`, `project.number`, `project.title`, `project.owner`, `project.fields`, `project.seed` |
 | | CodeRabbit config (`.coderabbit.yaml`)? Works only if the CodeRabbit app is installed. off / quiet / chill / assertive | **off**: third-party app, so never assumed. Suggest `assertive` for solo maintainers | `coderabbit` |
 | Labels | Emoji in label names? | no: plain names are easier to type in `--label` | `emojiLabels` |
 | Commit mode | Brand-new empty repository: commit setup directly to the default branch? | yes if empty, otherwise a setup branch and PR | `commitMode` (`direct` or `pr`) |
@@ -71,7 +72,8 @@ People       maintainer @octocat · security reports via GitHub private reportin
 CI           lint ✓ test ✓ build ✓ release ✗
 Dependencies Dependabot
 Branch       main
-Extras       wiki ✗ · Projects ✗ · default-branch ruleset: <ask — blocks direct pushes, needs admin rights>
+Projects     off · (on → title "demo Development", owner octocat, create new | adopt #N, fields: Status, Priority, seed backlog: no)
+Extras       wiki ✗ · default-branch ruleset: <ask — blocks direct pushes, needs admin rights>
              CodeRabbit config ✗ (off · quiet · chill · assertive; needs the CodeRabbit app)
 Labels       plain names (emoji: no)
 Commit mode  empty repo → commit setup directly to main (else a setup branch + PR)
@@ -84,4 +86,5 @@ Assumptions: <one line each from cw defaults notes>
 1. Start from `cw defaults --out <tmp>/answers.json` (outside the repository).
 2. Apply the user's changes to the JSON. Keep `repo` as `owner/name`, `maintainer` without `@`, and `securityContact` as an email or `""`.
 3. Run `cw plan --answers <tmp>/answers.json --out <tmp>/plan.json`. Validation errors list every problem at once: fix them all and re-run.
-4. Do not invent values the user did not give. If the description is still empty, ask again.
+4. Projects: change only `project`. Turning it on sets `project.enabled: true`; adopting needs `project.mode: "adopt"` and `project.number`. The owner must stay the repository owner. If `cw defaults` noted `🔒`, show `🔒 needs gh auth refresh -s project` on the Projects line; the interview is still answerable. An old answers file with `projectsBoard: "<title>"` is read as `{enabled: true, mode: "create", title}`.
+5. Do not invent values the user did not give. If the description is still empty, ask again.

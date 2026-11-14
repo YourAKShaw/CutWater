@@ -98,6 +98,13 @@ export function handle(state, args, { input = "", cwd = process.cwd() } = {}) {
     const name = args[2];
     const repo = state.repos[name];
     if (!repo) return notFoundRepo(name);
+    if (flag(args, "--json") === "projectsV2") {
+      if (state.scopes !== null && !state.scopes.some((s) => s.endsWith("project")))
+        return fail(
+          "error: your authentication token is missing required scopes [read:project]\nTo request it, run:  gh auth refresh -s read:project",
+        );
+      return json({ projectsV2: { Nodes: repo.linkedProjects ?? [] } });
+    }
     return json({
       nameWithOwner: name,
       defaultBranchRef: repo.isEmpty ? { name: "" } : { name: repo.defaultBranch },

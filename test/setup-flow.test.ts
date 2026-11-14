@@ -14,7 +14,7 @@ import { listLabels } from "../src/lib/labels.ts";
 import { readManifest } from "../src/lib/manifest.ts";
 import { computePlan } from "../src/lib/plan.ts";
 import { CutwaterError, exitCodeFor } from "../src/lib/errors.ts";
-import { preflight, requireProjectAccess } from "../src/lib/preflight.ts";
+import { linkedProjects, preflight, requireProjectAccess } from "../src/lib/preflight.ts";
 import { desiredRuleset, ensureRuleset } from "../src/lib/ruleset.ts";
 import { MANIFEST_PATH } from "../src/version.ts";
 import { sandbox, writeFiles, type Sandbox } from "./helpers.ts";
@@ -434,4 +434,21 @@ test("an organisation-owned repository gets the org policy note", async () => {
     result.problems.find((p) => p.code === "PROJECT_ORG")?.remediation ?? "",
     /organisation/,
   );
+});
+
+test("linkedProjects reads boards linked to the repository, owner only", async () => {
+  const box = sandbox();
+  box.state.scopes = ["repo", "project"];
+  const repo = box.state.repos["octocat/demo"];
+  assert.ok(repo);
+  repo.linkedProjects = [
+    { number: 3, title: "Demo board", owner: { login: "octocat" } },
+    { number: 4, title: "Closed", closed: true },
+    { number: 9, title: "Org board", owner: { login: "acme" } },
+  ];
+  assert.deepEqual(await linkedProjects(box.ctx, "octocat/demo"), [
+    { number: 3, title: "Demo board" },
+  ]);
+  box.state.scopes = ["repo"];
+  assert.equal(await linkedProjects(box.ctx, "octocat/demo"), null);
 });

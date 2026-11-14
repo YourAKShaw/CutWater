@@ -401,10 +401,19 @@ export function buildManifest(input: BuildManifestInput): { manifest: Manifest; 
   const choices = choicesFrom(input.answers);
   if (v2) {
     // v2 records the Project choice in its own shape and drops the v1 field.
-    const choice = migrateProjectChoice({
-      ...choices,
-      ...(input.previous?.choices.project ? { project: input.previous.choices.project } : {}),
-    });
+    const fromAnswers = input.answers.project;
+    const choice = fromAnswers
+      ? {
+          enabled: fromAnswers.enabled,
+          mode: fromAnswers.mode,
+          title: fromAnswers.title,
+          fields: [...fromAnswers.fields],
+          seed: fromAnswers.seed,
+        }
+      : migrateProjectChoice({
+          ...choices,
+          ...(input.previous?.choices.project ? { project: input.previous.choices.project } : {}),
+        });
     delete choices.projectsBoard;
     if (choice) choices.project = choice;
   }

@@ -368,9 +368,9 @@ export function computePlan(input: PlanInput): Plan {
     notes.push(
       "Wiki chosen: run `wiki-check`; GitHub requires the first wiki page to be created in the web UI.",
     );
-  if (answers.projectsBoard)
+  if (answers.project?.enabled)
     notes.push(
-      "Projects board chosen: needs the `project` scope (`gh auth refresh -s project`); set it up by hand for v1.",
+      `Projects chosen (${answers.project.mode === "adopt" ? `adopt #${answers.project.number}` : `create "${answers.project.title}"`}): run \`cw preflight --needs project\` first; the board is set up after the setup commit.`,
     );
 
   const fileEntries = entries.filter((entry): entry is FilePlanEntry => entry.kind === "file");
