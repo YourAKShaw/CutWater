@@ -575,7 +575,7 @@ export async function run(
         status: failure.status,
         stderr: result.stderr.trim().slice(0, 2000),
       },
-      remediationFor(result.stderr, failure) ?? undefined,
+      remediationFor(result.stderr, failure, args) ?? undefined,
     );
   }
 }

@@ -61,9 +61,17 @@ test("Projects scope errors from the #6 spike get a tailored fix", async () => {
     /^Run `gh auth refresh -s project`\. It opens a browser/,
   );
   const org = "GraphQL: Resource not accessible by integration: organization projects";
-  assert.match(remediationFor(org, classifyGhFailure(org)) ?? "", /organisation may disallow/);
+  const project = ["project", "create", "--owner", "o"];
+  assert.match(
+    remediationFor(org, classifyGhFailure(org), project) ?? "",
+    /organisation may disallow/,
+  );
   const pat = "GraphQL: Resource not accessible by personal access token (createProjectV2)";
-  assert.match(remediationFor(pat, classifyGhFailure(pat)) ?? "", /fine-grained token/);
+  assert.match(remediationFor(pat, classifyGhFailure(pat), project) ?? "", /fine-grained token/);
+  // Other commands keep the generic permission fix.
+  const labelPat = "HTTP 403: Resource not accessible by personal access token";
+  assert.equal(remediationFor(labelPat, classifyGhFailure(labelPat), ["label", "create"]), null);
+  assert.equal(remediationFor(org, classifyGhFailure(org), ["api", "repos/o/r/rulesets"]), null);
   assert.equal(
     remediationFor("HTTP 502: Bad Gateway", classifyGhFailure("HTTP 502: Bad Gateway")),
     null,

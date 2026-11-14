@@ -98,14 +98,15 @@ function classifyGhFailure(stderr) {
   return { code: "REMOTE", transient: false, status: status2 };
 }
 var REFRESH_NOTE = "It opens a browser or device flow, so run it yourself; cutwater never widens a token.";
-function remediationFor(stderr, failure) {
+function remediationFor(stderr, failure, args = []) {
   if (failure.code !== "SCOPE") return null;
   const missing = /missing required scopes?\s*\[([^\]]+)\]/i.exec(stderr)?.[1];
   if (missing !== void 0) {
     const scopes = missing.split(/[\s,]+/).filter((scope) => scope !== "").map((scope) => scope === "read:project" ? "project" : scope);
     return `Run \`gh auth refresh -s ${[...new Set(scopes)].join(",")}\`. ${REFRESH_NOTE}`;
   }
-  if (/organi[sz]ation/i.test(stderr) && /project/i.test(stderr)) {
+  if (args[0] !== "project") return null;
+  if (/organi[sz]ation/i.test(stderr)) {
     return "The organisation may disallow Projects, or your account may lack the organisation permission to create one. Ask an organisation owner.";
   }
   if (/personal access token/i.test(stderr)) {
@@ -702,7 +703,7 @@ async function run(ctx, cmd, args, opts = {}) {
         status: failure.status,
         stderr: result.stderr.trim().slice(0, 2e3)
       },
-      remediationFor(result.stderr, failure) ?? void 0
+      remediationFor(result.stderr, failure, args) ?? void 0
     );
   }
 }

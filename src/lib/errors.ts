@@ -153,9 +153,15 @@ const REFRESH_NOTE =
 
 /**
  * A remediation tailored to the failure, or null to keep the generic one.
- * Covers the Projects scope errors captured in the #6 spike.
+ * Covers the Projects scope errors captured in the #6 spike. The org and
+ * fine-grained token hints apply only to `gh project` calls (`args`), so
+ * label, ruleset and other failures keep the generic permission fix.
  */
-export function remediationFor(stderr: string, failure: GhFailure): string | null {
+export function remediationFor(
+  stderr: string,
+  failure: GhFailure,
+  args: readonly string[] = [],
+): string | null {
   if (failure.code !== "SCOPE") return null;
   const missing = /missing required scopes?\s*\[([^\]]+)\]/i.exec(stderr)?.[1];
   if (missing !== undefined) {
@@ -166,7 +172,8 @@ export function remediationFor(stderr: string, failure: GhFailure): string | nul
       .map((scope) => (scope === "read:project" ? "project" : scope));
     return `Run \`gh auth refresh -s ${[...new Set(scopes)].join(",")}\`. ${REFRESH_NOTE}`;
   }
-  if (/organi[sz]ation/i.test(stderr) && /project/i.test(stderr)) {
+  if (args[0] !== "project") return null;
+  if (/organi[sz]ation/i.test(stderr)) {
     return "The organisation may disallow Projects, or your account may lack the organisation permission to create one. Ask an organisation owner.";
   }
   if (/personal access token/i.test(stderr)) {
