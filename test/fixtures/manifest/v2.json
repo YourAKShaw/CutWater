@@ -1,0 +1,79 @@
+{
+  "$schema": "https://raw.githubusercontent.com/YourAKShaw/CutWater/main/skills/cutwater/assets/manifest.schema.json",
+  "schemaVersion": 2,
+  "skillVersion": "0.2.0",
+  "createdAt": "2026-11-10T00:00:00Z",
+  "updatedAt": "2026-11-10T00:00:00Z",
+  "repo": "octocat/demo",
+  "defaultBranch": "main",
+  "choices": {
+    "visibility": "private",
+    "stack": "generic",
+    "license": "MIT",
+    "ci": [
+      "lint"
+    ],
+    "dependencyBot": "dependabot",
+    "wiki": false,
+    "ruleset": true,
+    "emojiLabels": false,
+    "acceptOrgDefaults": false,
+    "copyrightYear": "2026",
+    "copyrightHolder": "octocat",
+    "maintainer": "octocat",
+    "securityContact": "octocat",
+    "project": {
+      "enabled": true,
+      "mode": "create",
+      "title": "Demo Development",
+      "fields": [
+        "status",
+        "priority"
+      ],
+      "seed": false
+    }
+  },
+  "applied": {
+    "files": {
+      "SECURITY.md": {
+        "template": "community/SECURITY.md",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "labels": [
+      "type: feat"
+    ],
+    "rulesetId": null
+  },
+  "project": {
+    "owner": "octocat",
+    "ownerType": "user",
+    "number": 3,
+    "id": "PVT_kwHOAAAAAc4A",
+    "title": "Demo Development",
+    "url": "https://github.com/users/octocat/projects/3",
+    "linked": true,
+    "adopted": false,
+    "fields": {
+      "status": {
+        "id": "PVTSSF_status",
+        "options": {
+          "todo": "a1",
+          "inProgress": "a2",
+          "inReview": "a3",
+          "blocked": "a4",
+          "done": "a5"
+        }
+      },
+      "priority": {
+        "id": "PVTSSF_priority",
+        "options": {
+          "p0": "b0",
+          "p1": "b1",
+          "p2": "b2",
+          "p3": "b3"
+        }
+      }
+    }
+  }
+}
