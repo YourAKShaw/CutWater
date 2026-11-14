@@ -18,6 +18,9 @@ export const CI_OPTIONS = ["lint", "test", "build", "release"] as const;
 export type CiOption = (typeof CI_OPTIONS)[number];
 export const VISIBILITIES = ["private", "public", "internal"] as const;
 export const DEPENDENCY_BOTS = ["dependabot", "renovate", "none"] as const;
+/** CodeRabbit review profile for .coderabbit.yaml; "off" writes no file. */
+export const CODERABBIT_PROFILES = ["off", "quiet", "chill", "assertive"] as const;
+export type CoderabbitProfile = (typeof CODERABBIT_PROFILES)[number];
 
 export interface Answers {
   name: string;
@@ -41,6 +44,11 @@ export interface Answers {
   wiki: boolean;
   projectsBoard: string | null;
   ruleset: boolean;
+  /**
+   * Write .coderabbit.yaml with this review profile. Optional for answers files
+   * written before it existed; missing means "off".
+   */
+  coderabbit?: CoderabbitProfile;
   /** "direct" commits setup to the default branch (empty repositories only); "pr" uses a setup branch. */
   commitMode: "direct" | "pr";
   emojiLabels: boolean;
@@ -86,6 +94,7 @@ export function defaultAnswers(input: DefaultsInput): DefaultsResult {
       wiki: false,
       projectsBoard: null,
       ruleset: false,
+      coderabbit: "off",
       commitMode: !input.remoteExists || input.isEmpty ? "direct" : "pr",
       emojiLabels: false,
       acceptOrgDefaults: false,
@@ -149,6 +158,9 @@ export function validateAnswers(input: unknown): Answers {
   if (!oneOf(a.dependencyBot, DEPENDENCY_BOTS)) {
     problems.push(`dependencyBot must be one of ${DEPENDENCY_BOTS.join(", ")}`);
   }
+  if (a.coderabbit !== undefined && !oneOf(a.coderabbit, CODERABBIT_PROFILES)) {
+    problems.push(`coderabbit must be one of ${CODERABBIT_PROFILES.join(", ")}`);
+  }
   if (!oneOf(a.commitMode, ["direct", "pr"] as const))
     problems.push('commitMode must be "direct" or "pr"');
   if (
@@ -198,6 +210,13 @@ export function templateVars(answers: Answers, root: string): TemplateVars {
     ciLint: answers.ci.includes("lint"),
     ciTest: answers.ci.includes("test"),
     ciBuild: answers.ci.includes("build"),
+    stackNode: answers.stack === "node" || answers.stack === "node-ts",
+    stackPython: answers.stack === "python",
+    stackGo: answers.stack === "go",
+    coderabbitProfile:
+      answers.coderabbit === undefined || answers.coderabbit === "off"
+        ? "chill"
+        : answers.coderabbit,
     labelFeat: labelName("type: feat", answers.emojiLabels),
     labelFix: labelName("type: fix", answers.emojiLabels),
     labelChore: labelName("type: chore", answers.emojiLabels),

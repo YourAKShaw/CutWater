@@ -27,6 +27,7 @@
         "wiki": { "type": "boolean" },
         "projectsBoard": { "type": ["string", "null"] },
         "ruleset": { "type": "boolean" },
+        "coderabbit": { "enum": ["off", "quiet", "chill", "assertive"] },
         "emojiLabels": { "type": "boolean" },
         "acceptOrgDefaults": { "type": "boolean" },
         "copyrightYear": { "type": "string", "pattern": "^\\d{4}$" },
