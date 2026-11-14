@@ -216,7 +216,8 @@ export function fileSpecs(answers: Answers, root: string): FileSpec[] {
       render: asset("repo/coderabbit.yaml"),
       satisfiedBy: () => {
         const found = coderabbitConfig(root);
-        return found !== null && found !== ".coderabbit.yaml" ? found : null;
+        if (found !== null && found !== ".coderabbit.yaml") return found;
+        return readText(join(root, ".coderabbit.config.ts")) === null ? null : ".coderabbit.config.ts";
       },
     });
   }
