@@ -38,6 +38,8 @@ export interface FakeState {
   scopes: string[] | null;
   repos: Record<string, FakeRepo>;
   orgDotGithub: Record<string, string[]>;
+  /** Act as a GitHub App installation token: GET /user is refused. */
+  appToken?: boolean;
   failures: { match: string; stderr: string; times: number }[];
   nextId: number;
   calls: string[][];
