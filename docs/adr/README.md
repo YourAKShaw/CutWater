@@ -11,3 +11,4 @@
 | [0007](0007-mainstream-defaults.md) | Dependabot, Contributor Covenant 3.0, MIT and private visibility by default |
 | [0008](0008-rulesets.md) | Rulesets instead of classic branch protection |
 | [0009](0009-name.md) | The skill is named `cutwater` |
+| [0010](0010-github-projects.md) | Opt-in GitHub Projects as a one-way projection of labels (proposed) |
