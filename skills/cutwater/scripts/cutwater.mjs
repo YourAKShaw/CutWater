@@ -301,7 +301,8 @@ var spawnRunner = (cmd, args, opts) => new Promise((resolve2) => {
         GH_PROMPT_DISABLED: "1",
         GH_NO_UPDATE_NOTIFIER: "1",
         GIT_TERMINAL_PROMPT: "0",
-        NO_COLOR: "1"
+        NO_COLOR: "1",
+        ...opts.env
       }
     });
   } catch (error) {
@@ -480,6 +481,7 @@ function singleFlagValue(args, long, short) {
     else if (letter && arg.length > 1 && arg.startsWith("-") && !arg.startsWith("--")) {
       const at = arg.indexOf(letter, 1);
       if (at === -1) continue;
+      if (at > 1) throw forbidden(`${short} may not be combined with other short flags`);
       const attached = arg.slice(at + 1).replace(/^=/, "");
       values.push(attached !== "" ? attached : args[++i] ?? "");
     }
@@ -506,7 +508,8 @@ async function run(ctx, cmd, args, opts = {}) {
   }
   let attempt = 0;
   for (; ; ) {
-    const result = await ctx.runner(cmd, args, { cwd: ctx.cwd, input: opts.input });
+    const env = cmd === "gh" && ctx.repo !== null ? { GH_REPO: ctx.repo } : void 0;
+    const result = await ctx.runner(cmd, args, { cwd: ctx.cwd, input: opts.input, env });
     log(ctx, { cmd, args, mutating, dryRun: ctx.dryRun, code: result.code, attempt });
     if (result.code === 0) return result;
     if (result.code === 127) {
