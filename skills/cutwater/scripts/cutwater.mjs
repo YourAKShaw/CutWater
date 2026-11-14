@@ -453,7 +453,7 @@ function assertAllowed(cmd, args, pinnedRepo) {
     }
     return;
   }
-  const repoFlag = flagValue(args, "--repo") ?? flagValue(args, "-R");
+  const repoFlag = singleFlagValue(args, "--repo", "-R");
   if (repoFlag === null) throw forbidden(`gh ${verb} must be pinned with --repo`);
   if (pinnedRepo !== null && repoFlag.toLowerCase() !== pinnedRepo.toLowerCase()) {
     throw forbidden(`refusing to touch ${repoFlag}: this run is pinned to ${pinnedRepo}`);
@@ -470,13 +470,19 @@ function assertPinnedApiPath(path, pinnedRepo, read) {
   if (read && target === `${owner}/.github`) return;
   throw forbidden(`refusing to touch ${target}: this run is pinned to ${pinnedRepo}`);
 }
-function flagValue(args, flag) {
+function singleFlagValue(args, long, short) {
+  const values = [];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i] ?? "";
-    if (arg === flag) return args[i + 1] ?? null;
-    if (arg.startsWith(`${flag}=`)) return arg.slice(flag.length + 1);
+    if (arg === "--") break;
+    if (arg === long || short !== void 0 && arg === short) values.push(args[++i] ?? "");
+    else if (arg.startsWith(`${long}=`)) values.push(arg.slice(long.length + 1));
+    else if (short !== void 0 && arg.startsWith(short) && !arg.startsWith("--")) {
+      values.push(arg.slice(short.length).replace(/^=/, ""));
+    }
   }
-  return null;
+  if (values.length > 1) throw forbidden(`${long} may be given only once`);
+  return values[0] ?? null;
 }
 function log(ctx, entry) {
   if (!ctx.logFile) return;

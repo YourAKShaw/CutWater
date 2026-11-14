@@ -242,7 +242,7 @@ export function assertAllowed(cmd: string, args: string[], pinnedRepo: string | 
     }
     return;
   }
-  const repoFlag = flagValue(args, "--repo") ?? flagValue(args, "-R");
+  const repoFlag = singleFlagValue(args, "--repo", "-R");
   if (repoFlag === null) throw forbidden(`gh ${verb} must be pinned with --repo`);
   if (pinnedRepo !== null && repoFlag.toLowerCase() !== pinnedRepo.toLowerCase()) {
     throw forbidden(`refusing to touch ${repoFlag}: this run is pinned to ${pinnedRepo}`);
@@ -261,6 +261,27 @@ function assertPinnedApiPath(path: string, pinnedRepo: string | null, read: bool
   const owner = pinned.split("/")[0];
   if (read && target === `${owner}/.github`) return;
   throw forbidden(`refusing to touch ${target}: this run is pinned to ${pinnedRepo}`);
+}
+
+/**
+ * The value of a pinning flag, refusing any repeat. gh takes the last value
+ * of a repeated flag, so checking only one occurrence would let
+ * `--repo pinned --repo other` slip past the pin (#46). Matches `--long V`,
+ * `--long=V`, `-S V`, `-S=V` and `-SV`. Throws FORBIDDEN on a second one.
+ */
+export function singleFlagValue(args: string[], long: string, short?: string): string | null {
+  const values: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i] ?? "";
+    if (arg === "--") break;
+    if (arg === long || (short !== undefined && arg === short)) values.push(args[++i] ?? "");
+    else if (arg.startsWith(`${long}=`)) values.push(arg.slice(long.length + 1));
+    else if (short !== undefined && arg.startsWith(short) && !arg.startsWith("--")) {
+      values.push(arg.slice(short.length).replace(/^=/, ""));
+    }
+  }
+  if (values.length > 1) throw forbidden(`${long} may be given only once`);
+  return values[0] ?? null;
 }
 
 export function flagValue(args: string[], flag: string): string | null {

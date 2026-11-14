@@ -37,6 +37,25 @@ test("requires --repo pinning and refuses other repositories", () => {
   forbidden(() => assertAllowed("gh", ["repo", "view", "evil/other"], "o/r"));
 });
 
+// gh uses the last value of a repeated flag, so any repeat must be refused (#46).
+test("refuses a repeated --repo in every spelling (security)", () => {
+  const issue = ["label", "create", "x"];
+  for (const extra of [
+    ["--repo", "evil/other"],
+    ["--repo=evil/other"],
+    ["-R", "evil/other"],
+    ["-Revil/other"],
+    ["-R=evil/other"],
+    ["--repo", "o/r"],
+  ]) {
+    forbidden(() => assertAllowed("gh", [...issue, "--repo", "o/r", ...extra], "o/r"));
+  }
+  forbidden(() => assertAllowed("gh", [...issue, "-R", "o/r", "--repo=evil/other"], "o/r"));
+  assertAllowed("gh", [...issue, "-R", "o/r"], "o/r");
+  assertAllowed("gh", [...issue, "--repo=o/r"], "o/r");
+  assertAllowed("gh", [...issue, "-Ro/r"], "o/r");
+});
+
 test("allows only the org .github repository as a cross-repo read", () => {
   assertAllowed("gh", ["api", "repos/o/.github/contents/SECURITY.md"], "o/r");
   forbidden(() =>
