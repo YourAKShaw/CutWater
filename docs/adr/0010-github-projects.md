@@ -45,7 +45,7 @@ When several `status:` labels are present, `blocked` wins, then `needs-review`, 
 
 **7. Failure semantics.** Setup steps are gated and fail loudly: exit 3 for auth or scope, 5 for remote errors, 4 for conflicts. Task-loop sync is best-effort, like reactions. It uses the item id from the idempotent `item-add` and never calls `gh project item-list` (101 points a page). On failure it reports one line and never blocks the issue, branch or PR. Non-idempotent creates (`project create`, `field-create`) are **never retried blindly**: `src/lib/exec.ts` retries transient failures today regardless of whether the call mutates, so a create that succeeded remotely but returned an error would run twice. After a transient error, CutWater looks the object up (Project by title, field by name) and retries only if it does not exist.
 
-**8. Not automated in v0.2.0.** These stay documented manual steps:
+**8. Not automated in v0.2.0.** These stay manual steps. The step-by-step instructions belong in the Projects reference (#20), following GitHub's [built-in automations](https://docs.github.com/en/issues/planning-and-tracking-with-projects/automating-your-project/using-the-built-in-automations) and [views](https://docs.github.com/en/issues/planning-and-tracking-with-projects/customizing-views-in-your-project/changing-the-layout-of-a-view) guides; this ADR records only the decision:
 
 - Views: creating them by REST is possible, but they cannot be updated afterwards, and they would add a second state to keep in step.
 - Built-in workflows ("Item closed", "Pull request merged"): the API cannot enable them. Turning them on is recommended, because it agrees with the projection (closed or merged → Done).
