@@ -295,3 +295,21 @@ test("item-edit refuses by-name and draft edits, which bypass the project id (se
     assertAllowed("gh", ["project", "item-edit", "--project-id", "PVT_ok"], "o/r", { projectIds }),
   );
 });
+
+test("never replays a non-idempotent project create after a transient failure", async () => {
+  const { runner, calls } = fakeRunner(() => ({ code: 1, stderr: "HTTP 502: Bad Gateway" }));
+  const ctx = testContext({ runner, repo: "o/r" });
+  await assert.rejects(gh(ctx, ["project", "create", "--owner", "o", "--title", "T"]));
+  assert.equal(calls.length, 1);
+  const again = fakeRunner(() => ({ code: 1, stderr: "HTTP 502: Bad Gateway" }));
+  await assert.rejects(
+    gh(testContext({ runner: again.runner, repo: "o/r" }), [
+      "project",
+      "view",
+      "1",
+      "--owner",
+      "o",
+    ]),
+  );
+  assert.ok(again.calls.length > 1, "reads still retry");
+});

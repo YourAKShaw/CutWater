@@ -407,6 +407,7 @@ var PROJECT_VERBS = {
     }
   }
 };
+var PROJECT_NO_RETRY = /* @__PURE__ */ new Set(["create", "field-create"]);
 var PROJECT_FORBIDDEN = /* @__PURE__ */ new Set([
   "delete",
   "close",
@@ -669,7 +670,8 @@ async function run(ctx, cmd, args, opts = {}) {
       throw new CutwaterError("USAGE", `git ${args.join(" ")} failed: ${result.stderr.trim()}`);
     }
     const failure = classifyGhFailure(result.stderr);
-    if (failure.transient && attempt < MAX_RETRIES) {
+    const replaySafe = !(args[0] === "project" && PROJECT_NO_RETRY.has(args[1] ?? ""));
+    if (failure.transient && replaySafe && attempt < MAX_RETRIES) {
       const delay = ctx.retryBaseMs * 2 ** attempt * (1 + Math.random() * 0.5);
       attempt++;
       await sleep(delay);

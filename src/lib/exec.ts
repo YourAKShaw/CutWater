@@ -194,6 +194,8 @@ const PROJECT_VERBS: Record<string, { write: boolean; number: boolean; flags: Pr
     },
   },
 };
+/** Creates that are not idempotent (#6): a replay after a lost response duplicates them. */
+const PROJECT_NO_RETRY = new Set(["create", "field-create"]);
 /** Destructive `gh project` verbs cutwater never runs (#8). */
 const PROJECT_FORBIDDEN = new Set([
   "delete",
@@ -553,7 +555,10 @@ export async function run(
       throw new CutwaterError("USAGE", `git ${args.join(" ")} failed: ${result.stderr.trim()}`);
     }
     const failure = classifyGhFailure(result.stderr);
-    if (failure.transient && attempt < MAX_RETRIES) {
+    // A lost response may hide a create that succeeded; replaying it would
+    // duplicate the Project or field (#6). #45 generalises this.
+    const replaySafe = !(args[0] === "project" && PROJECT_NO_RETRY.has(args[1] ?? ""));
+    if (failure.transient && replaySafe && attempt < MAX_RETRIES) {
       const delay = ctx.retryBaseMs * 2 ** attempt * (1 + Math.random() * 0.5);
       attempt++;
       await sleep(delay);
